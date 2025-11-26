@@ -1,6 +1,0 @@
-# ninja log v7
-1	196	1763916362889692339	tests/CMakeFiles/run_tests.dir/main.cpp.o	eb0a328a6942c82b
-0	11	1763777673270151443	lib/CMakeFiles/mystd.dir/vector.cpp.o	a776b6104e3132da
-1	45	1763803903089703382	lib/CMakeFiles/mystd.dir/exception.cpp.o	4c297457f3e2081c
-45	148	1763803903133727387	lib/libmystd.a	52cea63743010729
-197	236	1763916363085691430	bin/run_tests	8dbc611a834249ec
