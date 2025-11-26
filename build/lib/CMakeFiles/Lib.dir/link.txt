@@ -1,0 +1,2 @@
+/usr/bin/ar qc libLib.a CMakeFiles/Lib.dir/vector.cpp.o CMakeFiles/Lib.dir/exception.cpp.o
+/usr/bin/ranlib libLib.a
