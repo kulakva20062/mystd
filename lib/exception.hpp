@@ -5,17 +5,17 @@ namespace mystd
 {
     class Exception :public std::exception {
         public:
-            explicit Exception(const char* text_error, size_t error);
+            explicit Exception(const char* text_error, size_t error) noexcept;
 
-            virtual ~Exception() override;
+            virtual ~Exception() noexcept override;
 
-            Exception(const Exception& other);
+            Exception(const Exception& other) noexcept;
 
-            Exception& operator=(const Exception& other);
+            Exception& operator=(const Exception& other) noexcept;
 
-            const char* GetTextError();
+            virtual const char* what() const noexcept override;
 
-            size_t GetError();
+            virtual size_t GetError() const noexcept;
         protected:
             const char* text_error;
             size_t error;

@@ -1,4 +1,5 @@
 #pragma once
+#include "exception.hpp"
 #include "vector.hpp"
 
 namespace mystd {
@@ -26,6 +27,11 @@ namespace mystd {
             void Upper();
 
             void Lower();
+
+            int64_t ToInt64();
+        
+        protected: 
+            Exception ex2 {"Перевод из строки в число невозможен", 2};
 
     };
 

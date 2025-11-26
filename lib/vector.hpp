@@ -8,7 +8,7 @@ namespace mystd {
     template<typename Type>
     class Vector {
         public: 
-            explicit Vector(size_t size = 0, Type default_variable = Type()) 
+            explicit Vector(size_t size = 0, Type default_variable = '\0') noexcept
                 :size(size)
                 ,real_size(size + 1)
                 ,array(new Type[size + 1])
@@ -17,7 +17,6 @@ namespace mystd {
                     array[index] = default_variable;
                 }
             }
-
             virtual ~Vector() {
                 delete[] array;
             }
@@ -359,7 +358,7 @@ namespace mystd {
                     }
                     delete[] buffer;
                 }
-            }
+            } 
 
             void Sort(const size_t begin, const size_t end) {
                 if (begin >= end || end > size) {

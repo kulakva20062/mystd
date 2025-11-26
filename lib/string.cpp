@@ -1,17 +1,17 @@
 #include "string.hpp"
 #include "vector.hpp"
 #include <cstring>
+#include <cstdint>
 
 namespace mystd {
 
     String::String(size_t size, char default_value) : mystd::Vector<char> (size, default_value) {}
 
-    String::~String() {};
+    String::~String() {}
 
-    String::String(const String& other) : mystd::Vector<char> (other) {};
+    String::String(const String& other) : mystd::Vector<char> (other) {}
 
-    String::String(const char* other) 
-        :mystd::Vector<char> (strlen(other))
+    String::String(const char* other) : mystd::Vector<char> (strlen(other))
     {
         for (size_t index = 0; index < Size(); ++index) {
             operator[](index) = other[index];
@@ -76,6 +76,34 @@ namespace mystd {
                 data += change;
             } 
         }
+    }
+
+    int64_t String::ToInt64() {
+        size_t index = 0; 
+        while(operator[](index) == ' ') ++index;
+        bool sign = false;
+        if (operator[](index) == '-') {
+            ++index;
+            sign = true;
+        }
+        if (Size() - index > 19) {
+            throw ex2;
+        }
+        uint64_t value = 0;
+        while (index < Size()) {
+            if (operator[](index) < '0' || '9' > operator[](index)) {
+                throw ex2;
+            }
+            value *= 10;
+            value += (operator[](index) - '0');
+            ++index;
+        }
+        if (value > INT64_MAX) {
+            throw ex2;
+        }
+        int64_t answer = static_cast<int64_t>(value);
+        if (sign) answer *= -1;
+        return answer;
     }
 
 }
