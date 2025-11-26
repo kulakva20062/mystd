@@ -1,10 +1,7 @@
-#include "../lib/vector.h"
-#include <cstdio>
+#include "../lib/string.hpp"
 
 int main() {
-    FILE* file = fopen("text", "wb+");
-    for (size_t index = 0; index < 1580000000; ++index) {
-        fwrite("s", sizeof(char), 1, file);
-    }
-    fclose(file);
+    mystd::String s(5, '9') ,s2(5, 'p');
+    s2.Upper();
+    (s+s2).Print();
 }

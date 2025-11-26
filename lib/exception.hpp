@@ -5,7 +5,7 @@ namespace mystd
 {
     class Exception :public std::exception {
         public:
-            explicit Exception(const char* text, size_t error);
+            explicit Exception(const char* text_error, size_t error);
 
             virtual ~Exception() override;
 

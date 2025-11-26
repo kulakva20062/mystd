@@ -1,7 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <iostream>
-#include "exception.h"
+#include "exception.hpp"
 
 namespace mystd {
     
@@ -18,7 +18,7 @@ namespace mystd {
                 }
             }
 
-            ~Vector() {
+            virtual ~Vector() {
                 delete[] array;
             }
 
@@ -134,7 +134,7 @@ namespace mystd {
                 }
             }
 
-            void Resize(size_t new_size, Type value) {
+            void Resize(const size_t new_size, const Type& value) {
                 if (size >= new_size) {
                     size = new_size;
                 } else {
@@ -154,7 +154,14 @@ namespace mystd {
                 }
             }
 
-            void Reverse(size_t begin, size_t end) {
+            void Reverse() {
+                if (size == 0) throw ex1;
+                for (size_t index1 = 0, index2 = size - 1; index1 < index2; ++index1, --index2) {
+                    Swap(index1, index2);
+                }
+            }
+
+            void Reverse(const size_t begin, const size_t end) {
                 if (begin >= end || end > size) {
                     throw ex1;
                 }
@@ -163,11 +170,11 @@ namespace mystd {
                 }
             }
 
-            bool Empty() {
-                return !(bool(size));
+            bool Empty() const {
+                return !size;
             }
 
-            void PushBack(Type value) {
+            void PushBack(const Type& value = Type()) {
                 if (size == real_size) {
                     real_size *= 2;
                     Type* new_array = new Type[real_size];
@@ -183,7 +190,7 @@ namespace mystd {
 
             void PopBack() {
                 if (size == 0) {
-                    throw ex3;
+                    throw ex1;
                 } 
                 --size;
             }
@@ -192,7 +199,7 @@ namespace mystd {
                 return size;
             }
 
-            void Insert(size_t position, Type value) {
+            void Insert(const size_t position, const Type& value = Type()) {
                 if (position > size) {
                     throw ex1;
                 }
@@ -209,14 +216,42 @@ namespace mystd {
                     delete[] array;
                     array = new_array;
                 }
-                for (size_t index = size; index > position; --index) {
+                ++size;
+                for (size_t index = size - 1; index > position; --index) {
                     array[index] = array[index - 1];
                 }
                 array[position] = value;    
-                ++size;
             }
 
-            void Erase(size_t position) {
+            void Insert(const size_t begin, const size_t end, const Type& value = Type()) {
+                if (begin > size || begin >= end) {
+                    throw ex1;
+                }
+                if (size == begin) {
+                    for (size_t index = 0; index < end - begin; ++index) {
+                        PushBack(value);
+                    }
+                    return; 
+                } 
+                size += end - begin;
+                if (size > real_size) {
+                    real_size *= 2;
+                    Type* new_array = new Type[real_size];
+                    for (size_t index = 0; index < size; ++index) {
+                        new_array[index] = array[index];
+                    }
+                    delete[] array;
+                    array = new_array;
+                }
+                for (size_t index = size - 1; index >= end; --index) {
+                    array[index] = array[index - (end - begin)];
+                }
+                for (size_t index = begin; index < end; ++index) {
+                    array[index] = value;
+                } 
+            }
+
+            void Erase(const size_t position) {
                 if (position >= size) {
                     throw ex1;
                 }
@@ -226,14 +261,32 @@ namespace mystd {
                 --size;
             }
 
+            void Erase(const size_t begin, const size_t end) {
+                if (end > size || begin >= end) {
+                    throw ex1;
+                }
+                for (size_t index = end; index < size; ++index) {
+                    array[index - (end - begin)] = array[index];
+                }
+                size -= (end - begin);
+            }
+
             Type Top() const {
                 if (size == 0) {
-                    throw ex3;
+                    throw ex1;
                 }
                 return array[size - 1];
             }
 
-            void Swap(size_t position1, size_t position2) {
+            size_t Begin() const {
+                return 0;
+            }
+
+            size_t End() const {
+                return size;
+            }
+
+            void Swap(const size_t position1, const size_t position2) {
                 if (position1 >= size || position2 >= size) {
                     throw ex1;
                 } else {
@@ -244,7 +297,7 @@ namespace mystd {
             }
 
             void Print(const size_t size, const char* padding = " ", const bool line_feed = false) const {
-                if (size >= this->size) {
+                if (size > this->size) {
                     throw ex1;
                 }
                 for (size_t index = 0; index < size; ++index) {
@@ -264,7 +317,7 @@ namespace mystd {
                 }
             }
 
-            void Sort(size_t begin, size_t end, bool (*function)(Type A, Type B)) {
+            void Sort(const size_t begin, const size_t end, bool (*function)(const Type& A, const Type& B)) {
                 if (begin >= end || end > size) {
                     throw ex1;
                 }
@@ -308,7 +361,7 @@ namespace mystd {
                 }
             }
 
-            void Sort(size_t begin, size_t end) {
+            void Sort(const size_t begin, const size_t end) {
                 if (begin >= end || end > size) {
                     throw ex1;
                 }
@@ -352,20 +405,178 @@ namespace mystd {
                 }
             }
 
+            void Sort() {
+                size_t run = 64;
+                for (size_t index = 0; index < size; index += run) {
+                    if (index + run <= size) 
+                        InsertionSort(index, index + run);
+                    else 
+                        InsertionSort(index, size);
+                }
+                for (;size > run; run <<= 1) {
+                    Type* buffer = new Type[run * 2]; 
+                    for (size_t index = 0; index + run < size; index += (run << 1)) {
+                        size_t index1 = index;
+                        size_t index2 = index + run;
+                        size_t pos = 0;
+
+                        for(; (index1 < index + run) && (index2 < index + (run << 1)) && (index2 < size); ++pos) {
+                            if (CompareLess(array[index1], array[index2])) {
+                                buffer[pos] = array[index1];
+                                ++index1;
+                            } else {
+                                buffer[pos] = array[index2];
+                                ++index2;
+                            }
+                        }
+                        for(; index1 < index + run; ++index1, ++pos) {
+                            buffer[pos] = array[index1];
+                        }
+                        for(; (index2 < index + (run << 1)) && (index2 < size); ++index2, ++pos) {
+                            buffer[pos] = array[index2];
+                        }
+
+                        index1 = index;
+                        for (size_t index = 0; index < pos; ++index, ++index1) {
+                            array[index1] = buffer[index];
+                        }
+
+                    }
+                    delete[] buffer;
+                }
+            }
+
+            void Sort(bool (*function)(const Type& A, const Type& B)) {
+                size_t run = 64;
+                for (size_t index = 0; index < size; index += run) {
+                    if (index + run <= size) 
+                        InsertionSort(index, index + run, function);
+                    else 
+                        InsertionSort(index, size, function);
+                }
+                for (;size > run; run <<= 1) {
+                    Type* buffer = new Type[run * 2]; 
+                    for (size_t index = 0; index + run < size; index += (run << 1)) {
+                        size_t index1 = index;
+                        size_t index2 = index + run;
+                        size_t pos = 0;
+
+                        for(; (index1 < index + run) && (index2 < index + (run << 1)) && (index2 < size); ++pos) {
+                            if (function(array[index1], array[index2])) {
+                                buffer[pos] = array[index1];
+                                ++index1;
+                            } else {
+                                buffer[pos] = array[index2];
+                                ++index2;
+                            }
+                        }
+                        for(; index1 < index + run; ++index1, ++pos) {
+                            buffer[pos] = array[index1];
+                        }
+                        for(; (index2 < index + (run << 1)) && (index2 < size); ++index2, ++pos) {
+                            buffer[pos] = array[index2];
+                        }
+
+                        index1 = index;
+                        for (size_t index = 0; index < pos; ++index, ++index1) {
+                            array[index1] = buffer[index];
+                        }
+
+                    }
+                    delete[] buffer;
+                }
+            }
+
+            Vector<Type> SubLine(const size_t begin, const size_t end) const {
+                if (begin >= end || end > size) {
+                    throw ex1;
+                }
+                Vector<Type> new_vector(end - begin);
+                for (size_t index = 0; index < new_vector.size; ++index) {
+                    new_vector[index] = array[index + begin];
+                }
+                return new_vector;
+            }
+
+            size_t Count(const Type& value) {
+                size_t quantity = 0;
+                for (size_t index = 0; index < size; ++index) {
+                    if (array[index] == value) {
+                        ++quantity; 
+                    } 
+                }
+                return quantity;
+            }
+
+            size_t Count(const size_t begin, const size_t end, const Type& value) const {
+                if (begin >= end || end > size) {
+                    throw ex1;
+                }
+                size_t quantity = 0;
+                for (size_t index = begin; index < end; ++index) {
+                    if (array[index] == value) {
+                        ++quantity; 
+                    } 
+                }
+                return quantity;
+            }
+
+            size_t Find(const Type& value) const {
+                size_t index = 0;
+                while (index < size) {
+                    if (array[index] == value) return index;
+                    ++index;
+                }
+                return index;
+            }
+
+            size_t Find(size_t begin, size_t end, const Type& value) const {
+                if (begin >= end || end > size) {
+                    throw ex1;
+                }
+                size_t index = begin;
+                while (index < end) {
+                    if (array[index] == value) return index;
+                    ++index;
+                }
+                return index;
+            }
+
+            size_t RFind(const Type& value) const {
+                size_t index = size - 1;
+                while (index > 0) {
+                    if (array[index] == value) return index;
+                    --index;
+                }
+                if (array[index] != value) index = size;
+                return index;
+            }
+
+            size_t RFind(size_t begin, size_t end, const Type& value) const {
+                if (begin >= end || end > size) {
+                    throw ex1;
+                }
+                size_t index = end - 1;
+                while (index > begin) {
+                    if (array[index] == value) return index;
+                    ++index;
+                }
+                if (array[index] != value) index = end;
+                return index;
+            }
+
         protected:
             Exception ex1{"Передано значение за пределом вектора",  1}; 
-            Exception ex2{"Попытка уменьшить вектор на размер меньше 0",  2};
-            Exception ex3{"Вектор пуст Top() не работает", 3};
         private:
             Type* array;
             size_t size;
             size_t real_size;
 
-            bool CompareLess(Type A, Type B) {
+            bool CompareLess(const Type& A,const Type& B) const {
                 return A <= B;
             } 
 
-            void InsertionSort(size_t begin, size_t end, bool (*function)(Type A, Type B)) {
+            void InsertionSort(const size_t begin, const size_t end, bool (*function)(const Type& A, const Type& B)) {
                 for (size_t index = 1; index < end; ++index) {
                     Type current = array[index]; 
                     size_t left = begin;      
@@ -386,7 +597,7 @@ namespace mystd {
                 }
             }
 
-            void InsertionSort(size_t begin, size_t end) {
+            void InsertionSort(const size_t begin, const size_t end) {
                 for (size_t index = 1; index < end; ++index) {
                     Type current = array[index]; 
                     size_t left = begin;      
