@@ -3,6 +3,8 @@ add_library(mystd
     exception.cpp 
     exception.hpp 
     vector.hpp
+    queue.hpp
+    deque.hpp
     string.cpp
     string.hpp
 )

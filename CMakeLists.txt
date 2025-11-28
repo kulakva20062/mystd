@@ -1,15 +1,12 @@
-cmake_minimum_required(VERSION 3.14)
-project(mystd)
+cmake_minimum_required(VERSION 3.20)
 
-# Включить Google Test
-include(FetchContent)
-FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9fdab5977a8ad7f2b6ed44c.zip
-)
+project(mystd LANGUAGES CXX)
 
-FetchContent_MakeAvailable(googletest)
+set(CMAKE_CXX_STANDARD 23)
 
-# Поддиректории
+find_package(GTest)
+
 add_subdirectory(lib)
+
+enable_testing()
 add_subdirectory(tests)

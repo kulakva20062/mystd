@@ -8,7 +8,7 @@ namespace mystd {
     template<typename Type>
     class Vector {
         public: 
-            explicit Vector(size_t size = 0, Type default_variable = '\0') noexcept
+            explicit Vector(size_t size = 0,const Type& default_variable = Type()) noexcept
                 :size(size)
                 ,real_size(size + 1)
                 ,array(new Type[size + 1])
@@ -17,6 +17,7 @@ namespace mystd {
                     array[index] = default_variable;
                 }
             }
+
             virtual ~Vector() {
                 delete[] array;
             }
@@ -24,7 +25,7 @@ namespace mystd {
             Vector(const Vector<Type>& other)
                 :size(other.size)
                 ,real_size(other.real_size)
-                ,array(new Type[real_size])
+                ,array(new Type[other.real_size])
             {
                 for (size_t index = 0; index < size; index++) {
                     array[index] = other.array[index];
@@ -45,7 +46,7 @@ namespace mystd {
                 return *this;
             }
 
-            Type& operator[](const size_t position) const {
+            Type& operator[](const size_t position) {
                 if (position >= size) {
                     throw ex1;
                 }
@@ -154,16 +155,16 @@ namespace mystd {
             }
 
             void Reverse() {
-                if (size == 0) throw ex1;
                 for (size_t index1 = 0, index2 = size - 1; index1 < index2; ++index1, --index2) {
                     Swap(index1, index2);
                 }
             }
 
             void Reverse(const size_t begin, const size_t end) {
-                if (begin >= end || end > size) {
+                if (begin > end || end > size) {
                     throw ex1;
                 }
+                if (begin == end) return;
                 for (size_t index1 = begin, index2 = end - 1;index1 < index2; ++index1, --index2) {
                     Swap(index1, index2);
                 }
@@ -233,10 +234,10 @@ namespace mystd {
                     return; 
                 } 
                 size += end - begin;
-                if (size > real_size) {
+                while (size > real_size) {
                     real_size *= 2;
                     Type* new_array = new Type[real_size];
-                    for (size_t index = 0; index < size; ++index) {
+                    for (size_t index = 0; index < size - (end - begin); ++index) {
                         new_array[index] = array[index];
                     }
                     delete[] array;
@@ -268,7 +269,7 @@ namespace mystd {
                     array[index - (end - begin)] = array[index];
                 }
                 size -= (end - begin);
-            }
+            } // протестировано.
 
             Type Top() const {
                 if (size == 0) {
@@ -328,7 +329,7 @@ namespace mystd {
                         InsertionSort(index, end, function);
                 }
                 for (;end - begin >= run; run <<= 1) {
-                    Type* buffer = new Type[run]; 
+                    Type* buffer = new Type[run << 1]; 
                     for (size_t index = begin; index + run < end; index += (run << 1)) {
                         size_t index1 = index;
                         size_t index2 = index + run;
@@ -372,7 +373,7 @@ namespace mystd {
                         InsertionSort(index, end);
                 }
                 for (;(end - begin) > run; run <<= 1) {
-                    Type* buffer = new Type[run * 2]; 
+                    Type* buffer = new Type[run << 1]; 
                     for (size_t index = begin; index + run < end; index += (run << 1)) {
                         size_t index1 = index;
                         size_t index2 = index + run;
@@ -413,7 +414,7 @@ namespace mystd {
                         InsertionSort(index, size);
                 }
                 for (;size > run; run <<= 1) {
-                    Type* buffer = new Type[run * 2]; 
+                    Type* buffer = new Type[run << 1]; 
                     for (size_t index = 0; index + run < size; index += (run << 1)) {
                         size_t index1 = index;
                         size_t index2 = index + run;
@@ -454,7 +455,7 @@ namespace mystd {
                         InsertionSort(index, size, function);
                 }
                 for (;size > run; run <<= 1) {
-                    Type* buffer = new Type[run * 2]; 
+                    Type* buffer = new Type[run << 1]; 
                     for (size_t index = 0; index + run < size; index += (run << 1)) {
                         size_t index1 = index;
                         size_t index2 = index + run;
@@ -487,17 +488,18 @@ namespace mystd {
             }
 
             Vector<Type> SubLine(const size_t begin, const size_t end) const {
-                if (begin >= end || end > size) {
+                if (begin > end || end > size) {
                     throw ex1;
                 }
                 Vector<Type> new_vector(end - begin);
-                for (size_t index = 0; index < new_vector.size; ++index) {
+                for (size_t index = 0; index < new_vector.Size(); ++index) {
                     new_vector[index] = array[index + begin];
                 }
                 return new_vector;
             }
 
-            size_t Count(const Type& value) {
+            size_t Count(const Type& value) const {
+                
                 size_t quantity = 0;
                 for (size_t index = 0; index < size; ++index) {
                     if (array[index] == value) {
@@ -542,6 +544,9 @@ namespace mystd {
             }
 
             size_t RFind(const Type& value) const {
+                if (size == 0) {
+                    return 0;
+                }
                 size_t index = size - 1;
                 while (index > 0) {
                     if (array[index] == value) return index;
@@ -558,7 +563,7 @@ namespace mystd {
                 size_t index = end - 1;
                 while (index > begin) {
                     if (array[index] == value) return index;
-                    ++index;
+                    --index;
                 }
                 if (array[index] != value) index = end;
                 return index;
@@ -572,11 +577,11 @@ namespace mystd {
             size_t real_size;
 
             bool CompareLess(const Type& A,const Type& B) const {
-                return A <= B;
+                return A < B;
             } 
 
             void InsertionSort(const size_t begin, const size_t end, bool (*function)(const Type& A, const Type& B)) {
-                for (size_t index = 1; index < end; ++index) {
+                for (size_t index = begin + 1; index < end; ++index) {
                     Type current = array[index]; 
                     size_t left = begin;      
                     size_t right = index;    
@@ -597,7 +602,7 @@ namespace mystd {
             }
 
             void InsertionSort(const size_t begin, const size_t end) {
-                for (size_t index = 1; index < end; ++index) {
+                for (size_t index = begin + 1; index < end; ++index) {
                     Type current = array[index]; 
                     size_t left = begin;      
                     size_t right = index;    
