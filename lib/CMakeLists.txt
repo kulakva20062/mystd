@@ -1,12 +1,6 @@
-
 add_library(mystd
-    exception.cpp 
-    exception.hpp 
-    vector.hpp
-    queue.hpp
-    deque.hpp
     string.cpp
-    string.hpp
+    parser.cpp
 )
 
 target_include_directories(mystd PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

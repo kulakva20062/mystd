@@ -76,7 +76,7 @@ namespace mystd {
 
             void Pop() {
                 if (size == 0) {
-                    throw ex3;
+                    throw Exception("Попытка обратиться к очереди с 0 элементов(Pop, Front)", 3);
                 }
                 Node* next_node = first_in_line->next_node;
                 delete first_in_line;
@@ -89,7 +89,7 @@ namespace mystd {
 
             const Type& Front() const {
                 if (size == 0) {
-                    throw ex3;
+                    throw Exception("Попытка обратиться к очереди с 0 элементов(Pop, Front)", 3);
                 }
                 return first_in_line->data;
             }
@@ -97,9 +97,6 @@ namespace mystd {
             size_t Size() const {
                 return size;
             }
-            
-        protected:
-            Exception ex3{"Попытка обратиться к очереди с 0 элементов(Pop, Front)", 3};
 
             struct Node {
                 Node* next_node = nullptr;

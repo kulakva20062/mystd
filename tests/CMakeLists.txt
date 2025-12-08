@@ -13,6 +13,7 @@ FetchContent_MakeAvailable(googletest)
 add_executable(
     mystd_tests
     vector_tests.cpp
+    parser_tests.cpp
 )
 
 enable_testing()
@@ -20,7 +21,7 @@ enable_testing()
 target_link_libraries(
     mystd_tests
     PRIVATE
-        GTest::gtest
+        GTest::gtest    
         GTest::gtest_main
         mystd
 )

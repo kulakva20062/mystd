@@ -4,11 +4,11 @@
 #include "exception.hpp"
 
 namespace mystd {
-    
+
     template<typename Type>
     class Vector {
-        public: 
-            explicit Vector(size_t size = 0,const Type& default_variable = Type()) noexcept
+        public:
+            explicit Vector(size_t size = 0,const Type& default_variable = Type()) 
                 :size(size)
                 ,real_size(size + 1)
                 ,array(new Type[size + 1])
@@ -46,9 +46,9 @@ namespace mystd {
                 return *this;
             }
 
-            Type& operator[](const size_t position) {
+            Type& operator[](const size_t position) const {
                 if (position >= size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора operator[]", 1);
                 }
                 return array[position];
             }
@@ -117,7 +117,43 @@ namespace mystd {
                 return true;
             }
 
-            void Resize(size_t new_size) {
+            bool operator>(const Vector<Type>& other) {
+                for (size_t index = 0; index < other.size && index < size; ++index) {
+                    if (array[index] > other[index]) return true;
+                    else if (array[index] < other[index]) return false;
+                }
+                if (size < other.size) return true;
+                return false;
+            }
+
+            bool operator<(const Vector<Type>& other) {
+                for (size_t index = 0; index < other.size && index < size; ++index) {
+                    if (array[index] > other[index]) return false;
+                    else if (array[index] < other[index]) return true;
+                }
+                if (size > other.size) return true;
+                return false;
+            }
+
+            bool operator>=(const Vector<Type>& other) {
+                for (size_t index = 0; index < other.size && index < size; ++index) {
+                    if (array[index] > other[index]) return true;
+                    else if (array[index] < other[index]) return false;
+                }
+                if (size <= other.size) return true;
+                return false;
+            }
+
+            bool operator<=(const Vector<Type>& other) {
+                for (size_t index = 0; index < other.size && index < size; ++index) {
+                    if (array[index] < other[index]) return true;
+                    else if (array[index] > other[index]) return false;
+                }
+                if (size < other.size) return false;
+                return true;
+            }
+
+            void Resize(const size_t new_size) {
                 if (size >= new_size) {
                     size = new_size;
                 } else {
@@ -162,7 +198,7 @@ namespace mystd {
 
             void Reverse(const size_t begin, const size_t end) {
                 if (begin > end || end > size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Reverse", 1);
                 }
                 if (begin == end) return;
                 for (size_t index1 = begin, index2 = end - 1;index1 < index2; ++index1, --index2) {
@@ -190,8 +226,8 @@ namespace mystd {
 
             void PopBack() {
                 if (size == 0) {
-                    throw ex1;
-                } 
+                    throw Exception("Передано значение за пределом вектора PopBack", 1);
+                }
                 --size;
             }
 
@@ -201,12 +237,12 @@ namespace mystd {
 
             void Insert(const size_t position, const Type& value = Type()) {
                 if (position > size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Insert", 1);
                 }
                 if (size == position) {
                     PushBack(value);
-                    return; 
-                } 
+                    return;
+                }
                 if (size == real_size) {
                     real_size *= 2;
                     Type* new_array = new Type[real_size];
@@ -220,19 +256,19 @@ namespace mystd {
                 for (size_t index = size - 1; index > position; --index) {
                     array[index] = array[index - 1];
                 }
-                array[position] = value;    
+                array[position] = value;
             }
 
             void Insert(const size_t begin, const size_t end, const Type& value = Type()) {
                 if (begin > size || begin >= end) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Insert", 1);
                 }
                 if (size == begin) {
                     for (size_t index = 0; index < end - begin; ++index) {
                         PushBack(value);
                     }
-                    return; 
-                } 
+                    return;
+                }
                 size += end - begin;
                 while (size > real_size) {
                     real_size *= 2;
@@ -248,22 +284,22 @@ namespace mystd {
                 }
                 for (size_t index = begin; index < end; ++index) {
                     array[index] = value;
-                } 
+                }
             }
 
             void Erase(const size_t position) {
                 if (position >= size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Erase", 1);
                 }
                 for (size_t index = position + 1; index < size; ++index) {
-                    array[index - 1] = array[index]; 
+                    array[index - 1] = array[index];
                 }
                 --size;
             }
 
             void Erase(const size_t begin, const size_t end) {
                 if (end > size || begin >= end) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Erase", 1);
                 }
                 for (size_t index = end; index < size; ++index) {
                     array[index - (end - begin)] = array[index];
@@ -273,7 +309,7 @@ namespace mystd {
 
             Type Top() const {
                 if (size == 0) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Top", 1);
                 }
                 return array[size - 1];
             }
@@ -286,9 +322,16 @@ namespace mystd {
                 return size;
             }
 
+            void Clear() {
+                delete[] array;
+                size = 0;
+                array = new Type[size + 1];
+                real_size = size + 1;
+            }
+
             void Swap(const size_t position1, const size_t position2) {
                 if (position1 >= size || position2 >= size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Swap", 1);
                 } else {
                     Type other = array[position1];
                     array[position1] = array[position2];
@@ -298,7 +341,7 @@ namespace mystd {
 
             void Print(const size_t size, const char* padding = " ", const bool line_feed = false) const {
                 if (size > this->size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Print", 1);
                 }
                 for (size_t index = 0; index < size; ++index) {
                     std::cout << array[index] << padding;
@@ -319,17 +362,17 @@ namespace mystd {
 
             void Sort(const size_t begin, const size_t end, bool (*function)(const Type& A, const Type& B)) {
                 if (begin >= end || end > size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Sort", 1);
                 }
                 size_t run = 64;
                 for (size_t index = begin; index < end; index += run) {
-                    if (index + run <= end) 
+                    if (index + run <= end)
                         InsertionSort(index, index + run, function);
-                    else 
+                    else
                         InsertionSort(index, end, function);
                 }
                 for (;end - begin >= run; run <<= 1) {
-                    Type* buffer = new Type[run << 1]; 
+                    Type* buffer = new Type[run << 1];
                     for (size_t index = begin; index + run < end; index += (run << 1)) {
                         size_t index1 = index;
                         size_t index2 = index + run;
@@ -359,21 +402,21 @@ namespace mystd {
                     }
                     delete[] buffer;
                 }
-            } 
+            }
 
             void Sort(const size_t begin, const size_t end) {
                 if (begin >= end || end > size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора Sort", 1);
                 }
                 size_t run = 64;
                 for (size_t index = begin; index < end; index += run) {
-                    if (index + run <= end) 
+                    if (index + run <= end)
                         InsertionSort(index, index + run);
-                    else 
+                    else
                         InsertionSort(index, end);
                 }
                 for (;(end - begin) > run; run <<= 1) {
-                    Type* buffer = new Type[run << 1]; 
+                    Type* buffer = new Type[run << 1];
                     for (size_t index = begin; index + run < end; index += (run << 1)) {
                         size_t index1 = index;
                         size_t index2 = index + run;
@@ -408,13 +451,13 @@ namespace mystd {
             void Sort() {
                 size_t run = 64;
                 for (size_t index = 0; index < size; index += run) {
-                    if (index + run <= size) 
+                    if (index + run <= size)
                         InsertionSort(index, index + run);
-                    else 
+                    else
                         InsertionSort(index, size);
                 }
                 for (;size > run; run <<= 1) {
-                    Type* buffer = new Type[run << 1]; 
+                    Type* buffer = new Type[run << 1];
                     for (size_t index = 0; index + run < size; index += (run << 1)) {
                         size_t index1 = index;
                         size_t index2 = index + run;
@@ -446,16 +489,16 @@ namespace mystd {
                 }
             }
 
-            void Sort(bool (*function)(const Type& A, const Type& B)) {
+            void Sort(bool (*function)(const Type& A, const Type& B)){
                 size_t run = 64;
                 for (size_t index = 0; index < size; index += run) {
-                    if (index + run <= size) 
+                    if (index + run <= size)
                         InsertionSort(index, index + run, function);
-                    else 
+                    else
                         InsertionSort(index, size, function);
                 }
                 for (;size > run; run <<= 1) {
-                    Type* buffer = new Type[run << 1]; 
+                    Type* buffer = new Type[run << 1];
                     for (size_t index = 0; index + run < size; index += (run << 1)) {
                         size_t index1 = index;
                         size_t index2 = index + run;
@@ -489,7 +532,7 @@ namespace mystd {
 
             Vector<Type> SubLine(const size_t begin, const size_t end) const {
                 if (begin > end || end > size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора, SubLine", 1);
                 }
                 Vector<Type> new_vector(end - begin);
                 for (size_t index = 0; index < new_vector.Size(); ++index) {
@@ -499,25 +542,25 @@ namespace mystd {
             }
 
             size_t Count(const Type& value) const {
-                
+
                 size_t quantity = 0;
                 for (size_t index = 0; index < size; ++index) {
                     if (array[index] == value) {
-                        ++quantity; 
-                    } 
+                        ++quantity;
+                    }
                 }
                 return quantity;
             }
 
             size_t Count(const size_t begin, const size_t end, const Type& value) const {
                 if (begin >= end || end > size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора, Count", 1);
                 }
                 size_t quantity = 0;
                 for (size_t index = begin; index < end; ++index) {
                     if (array[index] == value) {
-                        ++quantity; 
-                    } 
+                        ++quantity;
+                    }
                 }
                 return quantity;
             }
@@ -533,7 +576,7 @@ namespace mystd {
 
             size_t Find(size_t begin, size_t end, const Type& value) const {
                 if (begin >= end || end > size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора, Find", 1);
                 }
                 size_t index = begin;
                 while (index < end) {
@@ -558,7 +601,7 @@ namespace mystd {
 
             size_t RFind(size_t begin, size_t end, const Type& value) const {
                 if (begin >= end || end > size) {
-                    throw ex1;
+                    throw Exception("Передано значение за пределом вектора RFind", 1);
                 }
                 size_t index = end - 1;
                 while (index > begin) {
@@ -568,9 +611,7 @@ namespace mystd {
                 if (array[index] != value) index = end;
                 return index;
             }
-
-        protected:
-            Exception ex1{"Передано значение за пределом вектора",  1}; 
+            
         private:
             Type* array;
             size_t size;
@@ -578,20 +619,20 @@ namespace mystd {
 
             bool CompareLess(const Type& A,const Type& B) const {
                 return A < B;
-            } 
+            }
 
             void InsertionSort(const size_t begin, const size_t end, bool (*function)(const Type& A, const Type& B)) {
                 for (size_t index = begin + 1; index < end; ++index) {
-                    Type current = array[index]; 
-                    size_t left = begin;      
-                    size_t right = index;    
+                    Type current = array[index];
+                    size_t left = begin;
+                    size_t right = index;
                     while (left < right) {
                         size_t mid = left + (right - left) / 2;
-                        
+
                         if (function(current, array[mid])) {
-                            right = mid;  
+                            right = mid;
                         } else {
-                            left = mid + 1;  
+                            left = mid + 1;
                         }
                     }
                     for (size_t index_ = index; index_ > left; --index_) {
@@ -603,16 +644,16 @@ namespace mystd {
 
             void InsertionSort(const size_t begin, const size_t end) {
                 for (size_t index = begin + 1; index < end; ++index) {
-                    Type current = array[index]; 
-                    size_t left = begin;      
-                    size_t right = index;    
+                    Type current = array[index];
+                    size_t left = begin;
+                    size_t right = index;
                     while (left < right) {
                         size_t mid = left + (right - left) / 2;
-                        
+
                         if (CompareLess(current, array[mid])) {
-                            right = mid;  
+                            right = mid;
                         } else {
-                            left = mid + 1;  
+                            left = mid + 1;
                         }
                     }
                     for (size_t index_ = index; index_ > left; --index_) {
@@ -622,5 +663,5 @@ namespace mystd {
                 }
             }
     };
-
+    
 } // namespace mystd

@@ -82,7 +82,7 @@ namespace mystd {
 
             void PopBack() {
                 if (size == 0) {
-                    throw ex4;
+                    throw Exception("Попытка обратиться к Деку с 0 элементов(Pop, Front, Back)", 4);
                 } else {
                     --size;
                     Node* new_node = last_in_line->last_node;
@@ -98,7 +98,7 @@ namespace mystd {
 
             const Type& Back() const {
                 if (size == 0) {
-                    throw ex4;
+                    throw Exception("Попытка обратиться к Деку с 0 элементов(Pop, Front, Back)", 4);
                 } else {
                     return last_in_line->data;
                 }
@@ -117,7 +117,7 @@ namespace mystd {
 
             void PopFront() {
                 if (size == 0) {
-                    throw ex4;
+                    throw Exception("Попытка обратиться к Деку с 0 элементов(Pop, Front, Back)", 4);
                 } else {
                     --size;
                     Node* new_node = first_in_line->next_node;
@@ -133,14 +133,11 @@ namespace mystd {
 
             const Type& Front() const {
                 if (size == 0) {
-                    throw ex4;
+                    throw Exception("Попытка обратиться к Деку с 0 элементов(Pop, Front, Back)", 4);
                 } else {
                     return first_in_line->data;
                 }
             }
-            
-        protected:
-            Exception ex4{"Попытка обратиться к Деку с 0 элементов(Pop, Front, Back)", 3};
 
             struct Node {
                 Node* next_node = nullptr;

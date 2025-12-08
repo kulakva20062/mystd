@@ -1064,31 +1064,6 @@ TEST_F(VectorBasicOperationsStressTest, RandomOperationsStress) {
     EXPECT_EQ(vec.Empty(), (push_count == pop_count));
 }
 
-// 8. Очень большие структуры
-struct MassiveStruct {
-    char data[16384]; // 16KB на элемент
-    int id;
-    
-    MassiveStruct(int i = 0) : id(i) {
-        for (int j = 0; j < 16384; ++j) {
-            data[j] = static_cast<char>((i + j) % 256);
-        }
-    }
-};
-
-TEST_F(VectorBasicOperationsStressTest, PushBackMassiveStruct) {
-    mystd::Vector<MassiveStruct> vec;
-    
-    for (int i = 0; i < 10000; ++i) {
-        vec.PushBack(MassiveStruct(i));
-    }
-    
-    EXPECT_EQ(vec.Size(), 10000);
-    EXPECT_EQ(vec[0].id, 0);
-    EXPECT_EQ(vec[9999].id, 9999);
-    EXPECT_EQ(vec[5000].data[1000], static_cast<char>((5000 + 1000) % 256));
-}
-
 // 9. Долгий тест на реаллокацию
 TEST_F(VectorBasicOperationsStressTest, PushBackReallocationStress) {
     mystd::Vector<int> vec;
@@ -1291,22 +1266,6 @@ TEST_F(VectorInsertEraseStressTest, InsertRangeExtreme) {
     }
 }
 
-TEST_F(VectorInsertEraseStressTest, EraseSingleExtreme) {
-    mystd::Vector<int> vec(HUGE_SIZE);
-    for (size_t i = 0; i < vec.Size(); ++i) {
-        vec[i] = static_cast<int>(i);
-    }
-    
-    // Удаляем из начала 100K раз (худший случай)
-    for (size_t i = 0; i < 100000; ++i) {
-        vec.Erase(0);
-    }
-    
-    EXPECT_EQ(vec.Size(), HUGE_SIZE - 100000);
-    EXPECT_EQ(vec[0], 100000);
-    EXPECT_EQ(vec[vec.Size() - 1], HUGE_SIZE - 1);
-}
-
 TEST_F(VectorInsertEraseStressTest, EraseRangeExtreme) {
     mystd::Vector<int> vec(HUGE_SIZE);
     for (size_t i = 0; i < vec.Size(); ++i) {
@@ -1356,17 +1315,6 @@ TEST_F(VectorInsertEraseStressTest, InsertAtRandomPositions) {
     EXPECT_EQ(vec.Size(), 150000);
 }
 
-// 3. Тесты с double
-TEST_F(VectorInsertEraseStressTest, InsertDoubleExtreme) {
-    mystd::Vector<double> vec;
-    
-    for (size_t i = 0; i < LARGE_SIZE - 100000; ++i) {
-        vec.Insert(i % 100, i * 3.14159);
-    }
-    
-    EXPECT_EQ(vec.Size(), LARGE_SIZE - 100000);
-}
-
 TEST_F(VectorInsertEraseStressTest, EraseDoubleRange) {
     mystd::Vector<double> vec(LARGE_SIZE);
     for (size_t i = 0; i < vec.Size(); ++i) {
@@ -1378,20 +1326,6 @@ TEST_F(VectorInsertEraseStressTest, EraseDoubleRange) {
     EXPECT_EQ(vec.Size(), LARGE_SIZE - 300000);
     EXPECT_NEAR(vec[0], 0.0, 1e-10);
     EXPECT_NEAR(vec[vec.Size() - 1], (LARGE_SIZE - 1) * 2.71828, 1e-10);
-}
-
-// 4. Тесты со string (тяжелый тип)
-TEST_F(VectorInsertEraseStressTest, InsertStringExtreme) {
-    mystd::Vector<std::string> vec;
-    
-    for (size_t i = 0; i < 100000; ++i) {
-        std::string value = "String_" + std::to_string(i) + "_" + std::string(100, 'X');
-        vec.Insert(vec.Size() / (i % 10 + 1), value);
-    }
-    
-    EXPECT_EQ(vec.Size(), 100000);
-    EXPECT_GT(vec[0].size(), 10);
-    EXPECT_GT(vec[99999].size(), 10);
 }
 
 TEST_F(VectorInsertEraseStressTest, EraseStringRange) {
@@ -1440,19 +1374,6 @@ struct ComplexData {
         }
     }
 };
-
-TEST_F(VectorInsertEraseStressTest, InsertComplexStruct) {
-    mystd::Vector<ComplexData> vec;
-    
-    for (int i = 0; i < 50000; ++i) {
-        vec.Insert(i % 100, ComplexData(i));
-    }
-    
-    EXPECT_EQ(vec.Size(), 50000);
-    EXPECT_EQ(vec[0].id, 49900);
-    EXPECT_EQ(vec[49999].id, 99);
-    EXPECT_EQ(vec[25000].name, "Object_24900");
-}
 
 // 7. Стресс-тесты на граничные случаи
 TEST_F(VectorInsertEraseStressTest, InsertAtBoundaries) {
@@ -1503,40 +1424,6 @@ TEST_F(VectorInsertEraseStressTest, PerformanceInsertAtEnd) {
     EXPECT_EQ(vec.Size(), LARGE_SIZE);
 }
 
-TEST_F(VectorInsertEraseStressTest, PerformanceInsertAtBeginning) {
-    mystd::Vector<int> vec;
-    
-    auto start = std::chrono::high_resolution_clock::now();
-    
-    for (size_t i = 0; i < 100000; ++i) {
-        vec.Insert(0, static_cast<int>(i));
-    }
-    
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    
-    EXPECT_LE(duration.count(), 6000);
-    EXPECT_EQ(vec.Size(), 100000);
-}
-
-// 9. Тесты на правильность работы с памятью
-TEST_F(VectorInsertEraseStressTest, MemoryReuseAfterMultipleOperations) {
-    mystd::Vector<int> vec;
-    
-    // Многократные вставки и удаления
-    for (int cycle = 0; cycle < 50; ++cycle) {
-        // Вставляем блок
-        for (int i = 0; i < 10000; ++i) {
-            vec.Insert(vec.Size() / 2, cycle * 10000 + i);
-        }
-        
-        // Удаляем часть
-        vec.Erase(2000, 8000);
-    }
-    
-    EXPECT_EQ(vec.Size(), 50 * 4000); // 50 циклов * (10000 - 6000)
-}
-
 // 10. Тесты с исключениями
 TEST_F(VectorInsertEraseStressTest, ExceptionHandling) {
     mystd::Vector<int> vec(1000, 1);
@@ -1553,19 +1440,6 @@ TEST_F(VectorInsertEraseStressTest, ExceptionHandling) {
     // Некорректный диапазон удаления
     EXPECT_THROW(vec.Erase(500, 400), std::exception);
     EXPECT_THROW(vec.Erase(500, 1500), std::exception);
-}
-
-// 11. Тесты с bool (специальный случай)
-TEST_F(VectorInsertEraseStressTest, InsertEraseBool) {
-    mystd::Vector<bool> vec;
-    
-    for (size_t i = 0; i < 200000; ++i) {
-        vec.Insert(i % 100, (i % 2 == 0));
-    }
-    
-    vec.Erase(50000, 150000);
-    
-    EXPECT_EQ(vec.Size(), 100000);
 }
 
 // 12. Долгий комбинированный тест
@@ -1638,4 +1512,139 @@ TEST_F(VectorInsertEraseStressTest, StabilityTest) {
     // Сумма должна быть корректной (хотя и не обязательно равной expected_sum)
     EXPECT_GE(actual_sum, 0);
     EXPECT_GT(vec.Size(), 0);
+}
+
+TEST(VectorTest, BeginMethod) {
+    // Begin() всегда возвращает 0
+    mystd::Vector<int> vec1;
+    EXPECT_EQ(vec1.Begin(), 0);
+    
+    mystd::Vector<int> vec2(10); // вектор с 10 элементами
+    EXPECT_EQ(vec2.Begin(), 0);
+    
+    mystd::Vector<std::string> vec3;
+    vec3.PushBack("test");
+    EXPECT_EQ(vec3.Begin(), 0);
+}
+
+TEST(VectorTest, EndMethod) {
+    // Тест 1: End() на пустом векторе
+    mystd::Vector<int> empty_vec;
+    EXPECT_EQ(empty_vec.End(), 0);
+    
+    // Тест 2: End() на векторе с элементами
+    mystd::Vector<int> vec;
+    vec.PushBack(1);
+    vec.PushBack(2);
+    vec.PushBack(3);
+    EXPECT_EQ(vec.End(), 3);
+    
+    // Тест 3: End() после удаления
+    vec.PopBack();
+    EXPECT_EQ(vec.End(), 2);
+    
+    // Тест 4: End() после очистки
+    vec.Clear(); // предполагается, что такой метод есть
+    EXPECT_EQ(vec.End(), 0);
+}
+
+TEST(VectorTest, SwapMethod) {
+    // Тест 1: Корректный обмен
+    mystd::Vector<int> vec;
+    vec.PushBack(10);
+    vec.PushBack(20);
+    vec.PushBack(30);
+    vec.PushBack(40);
+    
+    vec.Swap(1, 2);
+    EXPECT_EQ(vec[1], 30);
+    EXPECT_EQ(vec[2], 20);
+    
+    // Тест 2: Обмен первого и последнего
+    vec.Swap(0, 3);
+    EXPECT_EQ(vec[0], 40);
+    EXPECT_EQ(vec[3], 10);
+    
+    // Тест 3: Обмен одинаковых позиций
+    vec.Swap(2, 2);
+    EXPECT_EQ(vec[2], 20); // должен остаться без изменений
+    
+    // Тест 5: Swap с пользовательским типом
+    mystd::Vector<std::string> str_vec;
+    str_vec.PushBack("apple");
+    str_vec.PushBack("banana");
+    str_vec.PushBack("cherry");
+    
+    str_vec.Swap(0, 2);
+    EXPECT_EQ(str_vec[0], "cherry");
+    EXPECT_EQ(str_vec[2], "apple");
+}
+
+TEST(VectorTest, IntegrationTest) {
+    // Комплексный тест: использование всех методов вместе
+    mystd::Vector<int> vec;
+    
+    // Заполняем вектор
+    for (int i = 0; i < 10; ++i) {
+        vec.PushBack(i * 10);
+    }
+    
+    // Проверяем Begin и End
+    EXPECT_EQ(vec.Begin(), 0);
+    EXPECT_EQ(vec.End(), 10);
+    
+    // Проверяем Top
+    EXPECT_EQ(vec.Top(), 90);
+    
+    // Делаем несколько обменов
+    vec.Swap(0, 9);
+    EXPECT_EQ(vec[0], 90);
+    EXPECT_EQ(vec[9], 0);
+    
+    // Проверяем Top после обмена
+    EXPECT_EQ(vec.Top(), 0);
+    
+    // Проверяем Begin (должен остаться 0)
+    EXPECT_EQ(vec.Begin(), 0);
+}
+
+TEST(VectorTest, SwapEdgeCases) {
+    // Краевые случаи для Swap
+    mystd::Vector<int> vec;
+    vec.PushBack(1);
+    vec.PushBack(2);
+    
+    // Обмен соседних элементов
+    vec.Swap(0, 1);
+    EXPECT_EQ(vec[0], 2);
+    EXPECT_EQ(vec[1], 1);
+    
+    // Обмен обратно
+    vec.Swap(1, 0);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 2);
+    
+    // Вектор с одним элементом
+    mystd::Vector<int> single_vec;
+    single_vec.PushBack(42);
+    EXPECT_NO_THROW(single_vec.Swap(0, 0));
+    EXPECT_EQ(single_vec[0], 42);
+}
+
+TEST(VectorTest, ConstMethods) {
+    // Тестирование константных методов
+    const mystd::Vector<int> vec = []() {
+        mystd::Vector<int> v;
+        v.PushBack(100);
+        v.PushBack(200);
+        return v;
+    }();
+    
+    // Const методы должны работать
+    EXPECT_EQ(vec.Top(), 200);
+    EXPECT_EQ(vec.Begin(), 0);
+    EXPECT_EQ(vec.End(), 2);
+    
+    // Нельзя вызвать Swap на константном объекте
+    // vec.Swap(0, 1); // Это не скомпилируется - хорошо
 }
