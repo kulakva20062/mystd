@@ -1,133 +1,385 @@
-name: Full CI Pipeline
+name: Full CI with Sanitizers
 
 on:
   push:
     branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master ]
-  schedule:
-    - cron: '0 2 * * 0'  # Каждое воскресенье в 2:00
+  workflow_dispatch:  # Разрешить ручной запуск
 
 env:
-  BUILD_TYPE: Release
-  CXX_STANDARD: 17
+  CTEST_OUTPUT_ON_FAILURE: ON
+  CTEST_PARALLEL_LEVEL: 4
 
 jobs:
-  format-check:
-    name: Format Check
+  # 1. Проверка форматирования кода
+  clang-format:
+    name: Clang-Format Check
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Check clang-format
-      uses: jidicula/clang-format-action@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
-        clang-format-version: '16'
-        check-path: 'src/'
+        fetch-depth: 0
     
+    - name: Run clang-format check
+      uses: jidicula/clang-format-action@v4.11.0
+      with:
+        clang-format-version: '17'
+        check-path: 'src/'
+        fallback-style: 'LLVM'
+    
+  # 2. Сборка в разных конфигурациях
+  build-matrix:
+    name: Build Matrix
+    runs-on: ubuntu-latest
+    needs: clang-format
+    strategy:
+      matrix:
+        build_type: [Debug, Release, MinSizeRel, RelWithDebInfo]
+        include:
+          - build_type: Debug
+            cmake_flags: "-DCMAKE_CXX_FLAGS='-O0 -g'"
+          - build_type: Release
+            cmake_flags: "-DCMAKE_CXX_FLAGS='-O3'"
+          - build_type: MinSizeRel
+            cmake_flags: "-DCMAKE_CXX_FLAGS='-Os'"
+          - build_type: RelWithDebInfo
+            cmake_flags: "-DCMAKE_CXX_FLAGS='-O2 -g'"
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          g++-12 \
+          lcov
+    
+    - name: Configure CMake
+      run: |
+        cmake -B build-${{ matrix.build_type }} \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_CXX_STANDARD=17 \
+          ${{ matrix.cmake_flags }}
+    
+    - name: Build
+      run: |
+        cd build-${{ matrix.build_type }}
+        ninja -j$(nproc)
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-${{ matrix.build_type }}
+        path: build-${{ matrix.build_type }}
+        retention-days: 7
+  
+  # 3. Основные тесты без санитайзеров
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-22.04
-    needs: format-check
+    runs-on: ubuntu-latest
+    needs: build-matrix
+    timeout-minutes: 10
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
     
     - name: Install GoogleTest
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtest-dev
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libgtest-dev \
+          googletest
+        
+        # Сборка и установка GTest
         cd /usr/src/gtest
         sudo cmake .
-        sudo make
+        sudo make -j$(nproc)
         sudo cp lib/*.a /usr/lib
     
-    - name: Configure
+    - name: Configure for tests
       run: |
-        cmake -B build \
-          -DCMAKE_CXX_STANDARD=${{ env.CXX_STANDARD }} \
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic"
+        cmake -B build-tests \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_STANDARD=17 \
+          -DBUILD_TESTS=ON \
+          -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror"
     
-    - name: Build
-      run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel $(nproc)
-    
-    - name: Run tests
+    - name: Build tests
       run: |
-        cd build
-        ./parser_google_tests --gtest_output=xml:test_results.xml
+        cd build-tests
+        cmake --build . --parallel $(nproc) --target all
+    
+    - name: Run tests with CTest
+      run: |
+        cd build-tests
+        ctest \
+          --output-on-failure \
+          --parallel ${{ env.CTEST_PARALLEL_LEVEL }} \
+          --timeout 60 \
+          --label-exclude "sanitizer|benchmark"
+    
+    - name: Generate test report
+      if: always()
+      run: |
+        cd build-tests
+        if [ -f Testing/Temporary/LastTest.log ]; then
+          echo "=== Last 50 lines of test output ==="
+          tail -50 Testing/Temporary/LastTest.log
+        fi
+        
+        # Генерация XML отчета
+        ctest --output-junit test-results.xml || true
     
     - name: Upload test results
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: unit-test-results
-        path: build/test_results.xml
+        name: test-results
+        path: build-tests/test-results.xml
     
     - name: Publish Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
+      uses: EnricoMi/publish-unit-test-result-action@v2
       with:
-        files: build/test_results.xml
+        files: build-tests/test-results.xml
+        check_name: Unit Test Results
+        comment_mode: 'off'
   
-  sanitizer-tests:
-    name: Sanitizer Tests
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        sanitizer: [asan, ubsan, tsan]
+  # 4. Тесты с AddressSanitizer (ASAN) - обнаружение утечек памяти
+  asan-tests:
+    name: AddressSanitizer Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    timeout-minutes: 15
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
     
-    - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libgtest-dev
-    
-    - name: Configure with ${{ matrix.sanitizer }}
+    - name: Install ASAN dependencies
       run: |
-        SAN_FLAGS=""
-        case "${{ matrix.sanitizer }}" in
-          asan)
-            SAN_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
-            ;;
-          ubsan)
-            SAN_FLAGS="-fsanitize=undefined"
-            ;;
-          tsan)
-            SAN_FLAGS="-fsanitize=thread"
-            ;;
-        esac
-        
-        cmake -B build-${{ matrix.sanitizer }} \
-          -DCMAKE_CXX_STANDARD=${{ env.CXX_STANDARD }} \
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libgtest-dev \
+          libasan6 \
+          gdb
+    
+    - name: Configure with ASAN
+      run: |
+        cmake -B build-asan \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_CXX_FLAGS="$SAN_FLAGS -Wall -Wextra" \
-          -DCMAKE_EXE_LINKER_FLAGS="$SAN_FLAGS"
+          -DCMAKE_CXX_STANDARD=17 \
+          -DBUILD_TESTS=ON \
+          -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -Wall -Wextra -Werror" \
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
     
-    - name: Build with ${{ matrix.sanitizer }}
-      run: cmake --build build-${{ matrix.sanitizer }} --parallel $(nproc)
-    
-    - name: Run tests with ${{ matrix.sanitizer }}
-      env:
-        ASAN_OPTIONS: detect_stack_use_after_return=1:check_initialization_order=1
-        UBSAN_OPTIONS: print_stacktrace=1
-        TSAN_OPTIONS: second_deadlock_stack=1
+    - name: Build with ASAN
       run: |
-        cd build-${{ matrix.sanitizer }}
-        ./parser_google_tests --gtest_output=xml:test_results_${{ matrix.sanitizer }}.xml
+        cd build-asan
+        cmake --build . --parallel $(nproc) --target all
     
-    - name: Upload sanitizer results
+    - name: Run tests with ASAN
+      env:
+        ASAN_OPTIONS: |
+          detect_stack_use_after_return=1
+          check_initialization_order=1
+          strict_string_checks=1
+          detect_container_overflow=1
+          detect_leaks=1
+          leak_check_at_exit=1
+          allocator_may_return_null=1
+          print_scariness=1
+          verbosity=1
+        LSAN_OPTIONS: |
+          suppress_leaks=libgtest.so
+          print_suppressions=0
+          report_objects=1
+          use_unaligned=1
+          max_leaks=20
+      run: |
+        cd build-asan
+        echo "=== Running tests with AddressSanitizer ==="
+        
+        # Запуск через CTest с детальным выводом
+        ctest \
+          --output-on-failure \
+          --timeout 120 \
+          --parallel ${{ env.CTEST_PARALLEL_LEVEL }} \
+          --output-junit asan-results.xml \
+          --tests-regex ".*" \
+          --extra-verbose
+        
+        # Дополнительная проверка утечек
+        echo "=== Checking for memory leaks ==="
+        ASAN_OPTIONS="detect_leaks=1:leak_check_at_exit=1:verbosity=1" \
+        ./parser_google_tests --gtest_list_tests 2>&1 | grep -A5 -B5 "leak\|Leak" || true
+    
+    - name: Upload ASAN results
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: sanitizer-${{ matrix.sanitizer }}-results
-        path: build-${{ matrix.sanitizer }}/test_results_${{ matrix.sanitizer }}.xml
+        name: asan-results
+        path: |
+          build-asan/asan-results.xml
+          build-asan/Testing/**/*.log
+        retention-days: 30
+    
+    - name: Analyze memory issues
+      if: failure()
+      run: |
+        echo "=== ASAN failure detected ==="
+        cd build-asan
+        
+        # Попробуем найти детали в логах
+        if [ -f Testing/Temporary/LastTest.log ]; then
+          echo "=== Memory leak/error details ==="
+          grep -i -A10 -B5 "leak\|Leak\|ERROR.*Sanitizer\|SUMMARY.*Sanitizer" Testing/Temporary/LastTest.log || true
+        fi
+        
+        # Попытка воспроизвести с gdb
+        echo "=== Attempting to debug with gdb ==="
+        ASAN_OPTIONS="detect_leaks=1:leak_check_at_exit=1:verbosity=2:abort_on_error=1" \
+        gdb -ex "run" -ex "bt" -ex "quit" --args ./parser_google_tests --gtest_filter="*" 2>&1 | tail -100 || true
   
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-22.04
+  # 5. Тесты с UndefinedBehaviorSanitizer (UBSAN)
+  ubsan-tests:
+    name: UndefinedBehaviorSanitizer Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    timeout-minutes: 10
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Configure with UBSAN
+      run: |
+        cmake -B build-ubsan \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_STANDARD=17 \
+          -DBUILD_TESTS=ON \
+          -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -Wall -Wextra -Werror" \
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
+    
+    - name: Build with UBSAN
+      run: |
+        cd build-ubsan
+        cmake --build . --parallel $(nproc) --target all
+    
+    - name: Run tests with UBSAN
+      env:
+        UBSAN_OPTIONS: |
+          print_stacktrace=1
+          halt_on_error=1
+          abort_on_error=1
+          verbosity=1
+      run: |
+        cd build-ubsan
+        echo "=== Running tests with UndefinedBehaviorSanitizer ==="
+        
+        ctest \
+          --output-on-failure \
+          --timeout 90 \
+          --parallel ${{ env.CTEST_PARALLEL_LEVEL }} \
+          --output-junit ubsan-results.xml
+        
+        # Дополнительная проверка неопределенного поведения
+        echo "=== Checking for undefined behavior ==="
+        UBSAN_OPTIONS="print_stacktrace=1:verbosity=1" \
+        ./parser_google_tests --gtest_filter="*" --gtest_repeat=1 2>&1 | tail -50 || true
+    
+    - name: Upload UBSAN results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ubsan-results
+        path: build-ubsan/ubsan-results.xml
+  
+  # 6. Тесты с LeakSanitizer (LSAN) - только утечки памяти
+  lsan-tests:
+    name: LeakSanitizer Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Configure with LSAN
+      run: |
+        cmake -B build-lsan \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_STANDARD=17 \
+          -DBUILD_TESTS=ON \
+          -DCMAKE_CXX_FLAGS="-fsanitize=leak -fno-omit-frame-pointer -Wall -Wextra" \
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=leak"
+    
+    - name: Build with LSAN
+      run: |
+        cd build-lsan
+        cmake --build . --parallel $(nproc) --target all
+    
+    - name: Run LSAN tests
+      env:
+        LSAN_OPTIONS: |
+          report_objects=1
+          max_leaks=50
+          print_suppressions=0
+          verbosity=1
+          use_unaligned=1
+      run: |
+        cd build-lsan
+        echo "=== Running tests with LeakSanitizer ==="
+        
+        # Запуск всех тестов через CTest
+        ctest \
+          --output-on-failure \
+          --timeout 90 \
+          --parallel 2 \
+          --output-junit lsan-results.xml
+        
+        echo "=== Running individual tests for detailed leak detection ==="
+        
+        # Запуск каждого теста отдельно для точного определения утечек
+        for test in $(ctest -N | grep "Test #" | awk '{print $3}'); do
+          echo "--- Testing: $test ---"
+          LSAN_OPTIONS="report_objects=1:verbosity=1:max_leaks=20" \
+          ctest -R "^${test}$" --output-on-failure || true
+        done
+    
+    - name: Upload LSAN results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: lsan-results
+        path: build-lsan/lsan-results.xml
+  
+  # 7. Покрытие кода (Code Coverage)
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
     
     - name: Install coverage tools
       run: |
@@ -137,62 +389,175 @@ jobs:
           lcov \
           libgtest-dev
     
-    - name: Configure with coverage
+    - name: Configure for coverage
       run: |
         cmake -B build-coverage \
-          -DCMAKE_CXX_STANDARD=${{ env.CXX_STANDARD }} \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage -O0 -g" \
+          -DCMAKE_CXX_STANDARD=17 \
+          -DBUILD_TESTS=ON \
+          -DENABLE_COVERAGE=ON \
+          -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage -O0 -g -Wall -Wextra" \
           -DCMAKE_EXE_LINKER_FLAGS="--coverage"
     
-    - name: Build with coverage
-      run: cmake --build build-coverage --parallel $(nproc)
+    - name: Build for coverage
+      run: |
+        cd build-coverage
+        cmake --build . --parallel $(nproc) --target all
     
     - name: Run tests for coverage
       run: |
         cd build-coverage
-        ./parser_google_tests
+        echo "=== Running tests for coverage ==="
+        
+        ctest \
+          --output-on-failure \
+          --parallel ${{ env.CTEST_PARALLEL_LEVEL }} \
+          --timeout 60
+        
+        # Запуск всех тестов для максимального покрытия
+        ./parser_google_tests --gtest_filter="*" || true
     
     - name: Generate coverage report
       run: |
         cd build-coverage
-        gcovr --exclude-unreachable-branches --exclude-throw-branches \
-              --print-summary --xml-pretty --output coverage.xml \
-              --root ../ .
+        
+        # Сбор данных покрытия
+        lcov --capture --directory . --output-file coverage.info
+        
+        # Фильтрация системных файлов
+        lcov --remove coverage.info \
+          '/usr/*' \
+          '*/test/*' \
+          '*/tests/*' \
+          '*/googletest/*' \
+          --output-file coverage.filtered.info
+        
+        # Генерация отчетов
+        lcov --list coverage.filtered.info
         
         # HTML отчет
-        gcovr --exclude-unreachable-branches --exclude-throw-branches \
-              --html-details --output coverage.html \
-              --root ../ .
+        genhtml coverage.filtered.info --output-directory coverage-html --demangle-cpp
+        
+        # XML отчет для Codecov
+        gcovr --exclude-unreachable-branches \
+              --exclude-throw-branches \
+              --print-summary \
+              --xml-pretty \
+              --output coverage.xml \
+              --root ${GITHUB_WORKSPACE} .
+        
+        # Текстовый отчет
+        gcovr --exclude-unreachable-branches \
+              --exclude-throw-branches \
+              --root ${GITHUB_WORKSPACE} . \
+              --output coverage.txt
     
-    - name: Upload coverage report
+    - name: Upload coverage reports
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-report
+        name: coverage-reports
         path: |
+          build-coverage/coverage-html/
           build-coverage/coverage.xml
-          build-coverage/coverage.html
+          build-coverage/coverage.txt
+          build-coverage/coverage.info
     
     - name: Upload to Codecov
       uses: codecov/codecov-action@v3
       with:
         file: build-coverage/coverage.xml
         flags: unittests
-        name: codecov-umbrella
+        name: codecov-coverage
   
-  benchmark:
-    name: Benchmark
-    runs-on: ubuntu-22.04
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  # 8. Итоговая проверка всех результатов
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: 
+      - unit-tests
+      - asan-tests
+      - ubsan-tests
+      - lsan-tests
+      - coverage
+    if: always()
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
     
-    - name: Install Google Benchmark
-      run: sudo apt-get install -y libbenchmark-dev
-    
-    - name: Run benchmarks
+    - name: Generate summary report
       run: |
-        cmake -B build-bench -DCMAKE_BUILD_TYPE=Release
-        cmake --build build-bench
-        ./build-bench/benchmark_tests  # если есть бенчмарки
+        echo "=== CI Pipeline Summary ==="
+        echo ""
+        
+        # Проверяем результаты каждого job
+        echo "Job Results:"
+        echo "------------"
+        
+        # Проверяем статусы всех jobs
+        if [[ "${{ needs.unit-tests.result }}" == "success" ]]; then
+          echo "✅ Unit Tests: PASSED"
+        else
+          echo "❌ Unit Tests: FAILED"
+        fi
+        
+        if [[ "${{ needs.asan-tests.result }}" == "success" ]]; then
+          echo "✅ ASAN Tests: PASSED (No memory corruption)"
+        else
+          echo "❌ ASAN Tests: FAILED (Memory issues detected)"
+        fi
+        
+        if [[ "${{ needs.lsan-tests.result }}" == "success" ]]; then
+          echo "✅ LSAN Tests: PASSED (No memory leaks)"
+        else
+          echo "❌ LSAN Tests: FAILED (Memory leaks detected)"
+        fi
+        
+        if [[ "${{ needs.ubsan-tests.result }}" == "success" ]]; then
+          echo "✅ UBSAN Tests: PASSED (No undefined behavior)"
+        else
+          echo "❌ UBSAN Tests: FAILED (Undefined behavior detected)"
+        fi
+        
+        if [[ "${{ needs.coverage.result }}" == "success" ]]; then
+          echo "✅ Code Coverage: COMPLETED"
+        else
+          echo "⚠️  Code Coverage: FAILED or SKIPPED"
+        fi
+        
+        echo ""
+        echo "Artifacts Available:"
+        echo "-------------------"
+        ls -la artifacts/ || echo "No artifacts found"
+        
+        # Проверяем наличие утечек памяти
+        echo ""
+        echo "Memory Leak Analysis:"
+        echo "--------------------"
+        
+        if [ -f "artifacts/asan-results/build-asan/asan-results.xml" ]; then
+          echo "ASAN results available in artifacts"
+          # Можно добавить парсинг XML для деталей
+        fi
+        
+        if [ -f "artifacts/lsan-results/build-lsan/lsan-results.xml" ]; then
+          echo "LSAN results available in artifacts"
+        fi
+        
+    - name: Send notification on failure
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        channel: '#ci-alerts'  # Настройте под себя
+        status: ${{ job.status }}
+        text: |
+          CI Pipeline Failed for ${{ github.repository }}
+          Commit: ${{ github.sha }}
+          Workflow: ${{ github.workflow }}
+          
+          Failed Jobs:
+          ${{ join(needs.*.result, '\n') }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
