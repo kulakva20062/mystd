@@ -1,0 +1,198 @@
+name: Full CI Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 2 * * 0'  # Каждое воскресенье в 2:00
+
+env:
+  BUILD_TYPE: Release
+  CXX_STANDARD: 17
+
+jobs:
+  format-check:
+    name: Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check clang-format
+      uses: jidicula/clang-format-action@v4
+      with:
+        clang-format-version: '16'
+        check-path: 'src/'
+    
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-22.04
+    needs: format-check
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install GoogleTest
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgtest-dev
+        cd /usr/src/gtest
+        sudo cmake .
+        sudo make
+        sudo cp lib/*.a /usr/lib
+    
+    - name: Configure
+      run: |
+        cmake -B build \
+          -DCMAKE_CXX_STANDARD=${{ env.CXX_STANDARD }} \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic"
+    
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel $(nproc)
+    
+    - name: Run tests
+      run: |
+        cd build
+        ./parser_google_tests --gtest_output=xml:test_results.xml
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: unit-test-results
+        path: build/test_results.xml
+    
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: build/test_results.xml
+  
+  sanitizer-tests:
+    name: Sanitizer Tests
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        sanitizer: [asan, ubsan, tsan]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libgtest-dev
+    
+    - name: Configure with ${{ matrix.sanitizer }}
+      run: |
+        SAN_FLAGS=""
+        case "${{ matrix.sanitizer }}" in
+          asan)
+            SAN_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
+            ;;
+          ubsan)
+            SAN_FLAGS="-fsanitize=undefined"
+            ;;
+          tsan)
+            SAN_FLAGS="-fsanitize=thread"
+            ;;
+        esac
+        
+        cmake -B build-${{ matrix.sanitizer }} \
+          -DCMAKE_CXX_STANDARD=${{ env.CXX_STANDARD }} \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_FLAGS="$SAN_FLAGS -Wall -Wextra" \
+          -DCMAKE_EXE_LINKER_FLAGS="$SAN_FLAGS"
+    
+    - name: Build with ${{ matrix.sanitizer }}
+      run: cmake --build build-${{ matrix.sanitizer }} --parallel $(nproc)
+    
+    - name: Run tests with ${{ matrix.sanitizer }}
+      env:
+        ASAN_OPTIONS: detect_stack_use_after_return=1:check_initialization_order=1
+        UBSAN_OPTIONS: print_stacktrace=1
+        TSAN_OPTIONS: second_deadlock_stack=1
+      run: |
+        cd build-${{ matrix.sanitizer }}
+        ./parser_google_tests --gtest_output=xml:test_results_${{ matrix.sanitizer }}.xml
+    
+    - name: Upload sanitizer results
+      uses: actions/upload-artifact@v4
+      with:
+        name: sanitizer-${{ matrix.sanitizer }}-results
+        path: build-${{ matrix.sanitizer }}/test_results_${{ matrix.sanitizer }}.xml
+  
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install coverage tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          gcovr \
+          lcov \
+          libgtest-dev
+    
+    - name: Configure with coverage
+      run: |
+        cmake -B build-coverage \
+          -DCMAKE_CXX_STANDARD=${{ env.CXX_STANDARD }} \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage -O0 -g" \
+          -DCMAKE_EXE_LINKER_FLAGS="--coverage"
+    
+    - name: Build with coverage
+      run: cmake --build build-coverage --parallel $(nproc)
+    
+    - name: Run tests for coverage
+      run: |
+        cd build-coverage
+        ./parser_google_tests
+    
+    - name: Generate coverage report
+      run: |
+        cd build-coverage
+        gcovr --exclude-unreachable-branches --exclude-throw-branches \
+              --print-summary --xml-pretty --output coverage.xml \
+              --root ../ .
+        
+        # HTML отчет
+        gcovr --exclude-unreachable-branches --exclude-throw-branches \
+              --html-details --output coverage.html \
+              --root ../ .
+    
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          build-coverage/coverage.xml
+          build-coverage/coverage.html
+    
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: build-coverage/coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+  
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Google Benchmark
+      run: sudo apt-get install -y libbenchmark-dev
+    
+    - name: Run benchmarks
+      run: |
+        cmake -B build-bench -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-bench
+        ./build-bench/benchmark_tests  # если есть бенчмарки
