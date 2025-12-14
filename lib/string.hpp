@@ -3,7 +3,7 @@
 
 namespace mystd {
     
-    class String : public Vector<char> {
+    class String final : public Vector<char> {
         public:
             explicit String(size_t size = 0, char default_value = '\0');
 
@@ -11,7 +11,7 @@ namespace mystd {
 
             String(const String& other);
             
-            String(const Vector<char>& other);
+            explicit String(const Vector<char>& other);
 
             String(const char* other);
             
@@ -31,14 +31,22 @@ namespace mystd {
 
             void Lower();
 
-            int64_t ToInt64();
-            
             String SubStr(const size_t begin, const size_t end) const;
+            
+            const char* CStr() const;
+            
+            int64_t ToInt() const;
+            
+            long double ToDouble() const;
             
     };
     
     bool operator==(const String& lhs, const String& rhs);
     
     bool operator!=(const String& lhs, const String& rhs);
+    
+    std::ostream& operator<<(std::ostream& os, const String& str);
+    
+    std::istream& operator>>(std::istream& is, String& str);
 
 }  // namespace mystd

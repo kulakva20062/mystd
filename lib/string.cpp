@@ -49,6 +49,33 @@ namespace mystd {
     bool operator!=(const String& lhs, const String& rhs) {
         return !(rhs == lhs);
     }
+    
+    std::ostream& operator<<(std::ostream& os, const String& string) {
+        os.write(string.Data(), string.Size());
+        return os;
+    }
+    
+    //Возможно можно(возможно) реализовать через буфер, но я не приудумал как.
+    std::istream& operator>>(std::istream& is, String& string) {
+        string.Resize(0);
+        char c;
+        while (is.get(c)) {
+            if (c != ' ' && c != '\n') {
+                string.PushBack(c);
+                break;
+            }
+        }
+        while (is.get(c)) {
+            if (c == ' ') {
+                return is;
+            }
+            string.PushBack(c);
+            if (c == '\n') {
+                return is;
+            }
+        }
+        return is;
+    }
 
     String& String::operator+=(const String& other) {
         size_t size = Size();
@@ -107,45 +134,76 @@ namespace mystd {
             } 
         }
     }
-
-    int64_t String::ToInt64() {
-        size_t index = 0; 
-        while(operator[](index) == ' ') ++index;
-        bool sign = false;
-        if (operator[](index) == '-') {
-            ++index;
-            sign = true;
-        }
-        if (Size() - index > 19) {
-            throw Exception("Перевод из строки в число невозможен", 2);
-        }
-        uint64_t value = 0;
-        while (index < Size()) {
-            if (operator[](index) < '0' || '9' < operator[](index)) {
-                throw Exception("Перевод из строки в число невозможен", 2);
-            }
-            value *= 10;
-            value += (operator[](index) - '0');
-            ++index;
-        }
-        if (value > INT64_MAX) {
-            throw Exception("Перевод из строки в число невозможен", 2);
-        }
-        int64_t answer = static_cast<int64_t>(value);
-        if (sign) answer *= -1;
-        return answer;
-    }
     
-    String String::SubStr(const size_t begin, const size_t end) const {
-        if (begin > end || end > Size()) {
-            throw Exception("Неверный диапазон", 2);
+    String String::SubStr(size_t begin, size_t end) const {
+        if (begin > end) {
+            throw Exception("Неверный диапазон, SubStr", 2);
+        } 
+        if (Size() < end) {
+            end = Size();
+            if (end < begin) {
+                begin = end;
+            }
         }
         String answer = *this;
-        answer.Resize(end - begin + 1);
-        for (size_t index = begin; index <= end; ++index) {
+        answer.Resize(end - begin);
+        for (size_t index = begin; index < end; ++index) {
             answer[index - begin] = operator[](index);
         }
         return answer;
     }
-
+    
+    const char* String::CStr() const {
+        return Data();
+    }
+    
+    //FIXME:
+    //Сделать проверку на переполнение
+    int64_t String::ToInt() const {
+        int64_t answer = 0;
+        int8_t sign = 1;
+        size_t index = 0;
+        if (operator[](0) == '-') {
+            sign = -1;
+            ++index;
+        }
+        for (; index < Size(); ++index) {
+            if (operator[](index) >= '0' && operator[](index) <= '9') {
+                answer = answer * 10 + operator[](index) - '0';
+            } else {
+                throw Exception("Неверный формат числа, ToInt()", 2);
+            }
+        }
+        return answer * sign;
+    }
+    
+    long double String::ToDouble() const {
+        long double answer = 0;
+        int8_t sign = 1;
+        size_t index = 0;
+        if (operator[](0) == '-') {
+            sign = -1;
+            ++index;
+        }
+        for (; index < Size(); ++index) {
+            if (operator[](index) >= '0' && operator[](index) <= '9') {
+                answer = answer * 10 + operator[](index) - '0';
+            } else if (operator[](index) == '.') {
+                ++index;
+                size_t step = 10;
+                for (; index < Size(); ++index) {
+                    if (operator[](index) >= '0' && operator[](index) <= '9') {
+                        answer += static_cast<long double>(operator[](index) - '0') / step;
+                        step *= 10;
+                    } else {
+                        throw Exception("Неверный формат числа, ToDouble()", 2);
+                    }
+                }
+            } else {
+                throw Exception("Неверный формат числа, ToDouble()", 2);
+            }
+        }
+        return answer * sign;
+    }
+    
 }

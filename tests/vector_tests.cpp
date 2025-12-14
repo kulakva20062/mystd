@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <gtest/gtest.h>
 #include "../lib/vector.hpp"
 #include <random>
@@ -791,11 +792,11 @@ TEST_F(VectorModificationStressTest, MultiplePartialReverses) {
 TEST_F(VectorModificationStressTest, ResizeWithMaxValue) {
     mystd::Vector<int> vec;
     
-    vec.Resize(LARGE_SIZE, INT_MAX);
+    vec.Resize(LARGE_SIZE, INT32_MAX);
     
     EXPECT_EQ(vec.Size(), LARGE_SIZE);
     for (size_t i = 0; i < vec.Size(); ++i) {
-        EXPECT_EQ(vec[i], INT_MAX);
+        EXPECT_EQ(vec[i], INT32_MAX);
     }
 }
 
@@ -1648,3 +1649,236 @@ TEST(VectorTest, ConstMethods) {
     // Нельзя вызвать Swap на константном объекте
     // vec.Swap(0, 1); // Это не скомпилируется - хорошо
 }
+
+#include <gtest/gtest.h>
+#include "vector.hpp"
+#include <vector>
+#include <random>
+#include <algorithm>
+
+using mystd::Vector;
+
+// Пользовательская функция: сортировка по убыванию
+bool Greater(const int& a, const int& b) {
+    return a > b;
+}
+
+// Вспомогательная функция: заполнить вектор случайными значениями
+void FillWithRandom(Vector<int>& vec, size_t count) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dist(1, 10000);
+
+    for (size_t i = 0; i < count; ++i) {
+        vec.PushBack(dist(gen));
+    }
+}
+
+// Вспомогательная функция: скопировать mystd::Vector в std::vector для проверки
+std::vector<int> ToStdVector(const Vector<int>& vec) {
+    std::vector<int> result;
+    for (size_t i = 0; i < vec.Size(); ++i) {
+        result.push_back(vec[i]);
+    }
+    return result;
+}
+
+// Проверка, отсортирован ли вектор по возрастанию
+bool IsSortedAscending(const std::vector<int>& vec) {
+    return std::is_sorted(vec.begin(), vec.end());
+}
+
+// Проверка, отсортирован ли вектор по убыванию
+bool IsSortedDescending(const std::vector<int>& vec) {
+    return std::is_sorted(vec.begin(), vec.end(), std::greater<int>());
+}
+
+// Тест: сортировка большого вектора (10 000 элементов) по возрастанию
+TEST(VectorSortTest, SortLargeVectorAscending) {
+    Vector<int> vec;
+    const size_t size = 10000;
+    FillWithRandom(vec, size);
+
+    EXPECT_NO_THROW(vec.Sort());
+
+    auto stdVec = ToStdVector(vec);
+    EXPECT_TRUE(IsSortedAscending(stdVec));
+}
+
+// Тест: сортировка большого вектора по убыванию с компаратором
+TEST(VectorSortTest, SortLargeVectorDescending) {
+    Vector<int> vec;
+    const size_t size = 10000;
+    FillWithRandom(vec, size);
+
+    EXPECT_NO_THROW(vec.Sort(Greater));
+
+    auto stdVec = ToStdVector(vec);
+    EXPECT_TRUE(IsSortedDescending(stdVec));
+}
+
+// Тест: сортировка частично отсортированного вектора
+TEST(VectorSortTest, SortPartiallySorted) {
+    Vector<int> vec;
+    // Заполняем почти отсортированные данные
+    for (int i = 0; i < 5000; ++i) {
+        vec.PushBack(i);
+    }
+    for (int i = 0; i < 5000; ++i) {
+        vec.PushBack(2500 - i); // Немного "мусора"
+    }
+
+    EXPECT_NO_THROW(vec.Sort());
+
+    auto stdVec = ToStdVector(vec);
+    EXPECT_TRUE(IsSortedAscending(stdVec));
+}
+
+// Тест: сортировка вектора с одинаковыми элементами
+TEST(VectorSortTest, SortAllEqualElements) {
+    Vector<int> vec;
+    const size_t size = 5000;
+    for (size_t i = 0; i < size; ++i) {
+        vec.PushBack(42);
+    }
+
+    EXPECT_NO_THROW(vec.Sort());
+
+    for (size_t i = 0; i < vec.Size(); ++i) {
+        EXPECT_EQ(vec[i], 42);
+    }
+}
+
+// Тест: сортировка уже отсортированного большого вектора
+TEST(VectorSortTest, SortAlreadySortedLarge) {
+    Vector<int> vec;
+    const size_t size = 10000;
+    for (int i = 0; i < static_cast<int>(size); ++i) {
+        vec.PushBack(i);
+    }
+
+    EXPECT_NO_THROW(vec.Sort());
+
+    auto stdVec = ToStdVector(vec);
+    EXPECT_TRUE(IsSortedAscending(stdVec));
+}
+
+// Тест: сортировка обратно отсортированного вектора (худший случай)
+TEST(VectorSortTest, SortReverseSortedLarge) {
+    Vector<int> vec;
+    const size_t size = 10000;
+    for (int i = static_cast<int>(size) - 1; i >= 0; --i) {
+        vec.PushBack(i);
+    }
+
+    EXPECT_NO_THROW(vec.Sort());
+
+    auto stdVec = ToStdVector(vec);
+    EXPECT_TRUE(IsSortedAscending(stdVec));
+}
+
+// Тест: сортировка поддиапазона в большом векторе
+TEST(VectorSortTest, SortRangeInLargeVector) {
+    Vector<int> vec;
+    const size_t total_size = 10000;
+    FillWithRandom(vec, total_size);
+
+    // Сортируем только [2000, 8000)
+    EXPECT_NO_THROW(vec.Sort(2000, 8000));
+
+    auto stdVec = ToStdVector(vec);
+
+    // Проверим, что [2000, 8000) отсортирован
+    bool range_sorted = std::is_sorted(stdVec.begin() + 2000, stdVec.begin() + 8000);
+    EXPECT_TRUE(range_sorted);
+
+    // Остальные части не трогали — не должны быть отсортированы
+    // (но это не обязательно проверять, главное — не сломалось)
+}
+
+// Тест: сортировка поддиапазона с пользовательским компаратором
+TEST(VectorSortTest, SortRangeWithCustomComparator) {
+    Vector<int> vec;
+    const size_t size = 1000;
+    FillWithRandom(vec, size);
+
+    EXPECT_NO_THROW(vec.Sort(100, 900, Greater));
+
+    auto stdVec = ToStdVector(vec);
+    bool range_desc = std::is_sorted(stdVec.begin() + 100, stdVec.begin() + 900, std::greater<int>());
+    EXPECT_TRUE(range_desc);
+}
+
+// Тест: сортировка малых диапазонов (включая edge cases)
+TEST(VectorSortTest, SortSmallRanges) {
+    Vector<int> vec;
+    vec.PushBack(3);
+    vec.PushBack(1);
+    vec.PushBack(4);
+    vec.PushBack(1);
+    vec.PushBack(5);
+
+    // Сортируем [1, 4) -> {1, 4, 1}
+    vec.Sort(1, 4);
+
+    EXPECT_EQ(vec[1], 1);
+    EXPECT_EQ(vec[2], 1);
+    EXPECT_EQ(vec[3], 4);
+}
+
+// Тест: сортировка пустого вектора
+TEST(VectorSortTest, SortEmptyVector) {
+    Vector<int> vec;
+    EXPECT_NO_THROW(vec.Sort());
+    EXPECT_TRUE(vec.Empty());
+}
+
+// Тест: сортировка вектора из одного элемента
+TEST(VectorSortTest, SortSingleElement) {
+    Vector<int> vec;
+    vec.PushBack(42);
+    EXPECT_NO_THROW(vec.Sort());
+    EXPECT_EQ(vec[0], 42);
+}
+
+// Тест: многократная сортировка
+TEST(VectorSortTest, MultipleSortCalls) {
+    Vector<int> vec;
+    FillWithRandom(vec, 1000);
+
+    EXPECT_NO_THROW({
+        vec.Sort();
+        vec.Sort(Greater);
+        vec.Sort();
+    });
+
+    auto stdVec = ToStdVector(vec);
+    EXPECT_TRUE(IsSortedAscending(stdVec));
+}
+
+// Тест: сортировка строк (небольшой, но с PushBack)
+TEST(VectorSortTest, SortStringsLarge) {
+    Vector<std::string> vec;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist('a', 'z');
+
+    // Генерим 1000 случайных строк длины 5
+    for (int i = 0; i < 1000; ++i) {
+        std::string str;
+        for (int j = 0; j < 5; ++j) {
+            str += static_cast<char>(dist(gen));
+        }
+        vec.PushBack(str);
+    }
+
+    EXPECT_NO_THROW(vec.Sort());
+
+    std::vector<std::string> stdVec;
+    for (size_t i = 0; i < vec.Size(); ++i) {
+        stdVec.push_back(vec[i]);
+    }
+
+    EXPECT_TRUE(std::is_sorted(stdVec.begin(), stdVec.end()));
+}
+

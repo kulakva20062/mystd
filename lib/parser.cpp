@@ -26,6 +26,8 @@ namespace mystd {
         for (size_t index = 1; index < argc; ++index) {
             Node* cur_node = start_node_;
             String string(argv[index]);
+            
+            //FIXME: Возможно стоит переписать на Очередь(Или Дек), позже будет проверено и отредактировано взависемости от скорость
             Vector<Node*> is_involved;
             
             //Проверка на команду
@@ -86,6 +88,7 @@ namespace mystd {
                 }
                 cur_node = cur_node->next_node;
             }
+            
             //Если это была команда, то выключаем считывания для старых Аргументов
             if (is_reading[index]) {
                 cur_node = start_node_;
@@ -129,6 +132,19 @@ namespace mystd {
                     if (cur_node->narg == kDelayedOptional) {
                         cur_node->to_read = false;
                     }
+                }
+                cur_node = cur_node->next_node;
+            }
+            
+            if (is_reading[index]) {
+                continue;
+            }
+            
+            cur_node = start_node_;
+            while (cur_node != nullptr) {
+                if (cur_node->narg == kRemainingArguments) {
+                    is_reading[index] = true;
+                    cur_node->vector.PushBack(string);
                 }
                 cur_node = cur_node->next_node;
             }

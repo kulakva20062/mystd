@@ -10,13 +10,14 @@ namespace mystd {
         kDelayedOptional = 1,       // Отложенная, необязательная  
         kDelayedZeroOrMore = 2,     // Отложенная, ноль или более
         kImmediateZeroOrMore = 3,   // Немедленная, ноль или более
-        kCommandOnly = 4            // Только команда
+        kCommandOnly = 4,            // Только команда
+        kRemainingArguments = 5     // Всё оставшееся
     };
  
     //Нет конструктора копирования и оператора присвоить,
     //потому что передавались бы указатели, а это просто не нужно,
     //изначально не задумывалось, что этот класс можно будет копировать, присваивать.
-    class Parser {
+    class Parser final {
         public:
             Parser();
 

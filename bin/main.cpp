@@ -1,6 +1,10 @@
-#include "string.hpp"
+#include "../lib/file_helper.hpp"
+#include "../lib/string.hpp"
+#include <cstring>
 
 int main() {
-    mystd::String string;
-    mystd::Vector<char> vector;
-}       
+    mystd::String str;
+    if (str == "Hello") {
+        std::cout << "Hello World!";
+    }
+}

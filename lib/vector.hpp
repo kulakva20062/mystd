@@ -16,6 +16,7 @@ namespace mystd {
                 for (size_t index = 0; index < size; ++index) {
                     array[index] = default_variable;
                 }
+                array[size] = Type();
             }
 
             virtual ~Vector() {
@@ -24,12 +25,13 @@ namespace mystd {
 
             Vector(const Vector<Type>& other)
                 :size(other.size)
-                ,real_size(other.real_size)
-                ,array(new Type[other.real_size])
+                ,real_size(other.size + 1)
+                ,array(new Type[other.size + 1])
             {
                 for (size_t index = 0; index < size; index++) {
                     array[index] = other.array[index];
                 }
+                array[size] = Type();
             }
 
             Vector<Type>& operator=(const Vector<Type>& other) {
@@ -43,6 +45,7 @@ namespace mystd {
                 for (size_t index = 0; index < size; index++) {
                     array[index] = other.array[index];
                 }
+                array[size] = Type();
                 return *this;
             }
 
@@ -54,8 +57,8 @@ namespace mystd {
             }
 
             virtual Vector<Type>& operator+=(const Vector<Type>& other) {
-                if (size + other.size > real_size) {
-                    real_size = size + other.size;
+                if (size + other.size + 1 > real_size) {
+                    real_size = size + other.size + 1;
                     Type* new_array = new Type[real_size];
                     for (size_t index = 0; index < size; ++index) {
                         new_array[index] = array[index];
@@ -67,6 +70,7 @@ namespace mystd {
                     array[size + index] = other.array[index];
                 }
                 size += other.size;
+                array[size] = Type();
                 return *this;
             }
 
@@ -117,7 +121,7 @@ namespace mystd {
                 return true;
             }
 
-            bool operator>(const Vector<Type>& other) {
+            bool operator>(const Vector<Type>& other) const {
                 for (size_t index = 0; index < other.size && index < size; ++index) {
                     if (array[index] > other[index]) return true;
                     else if (array[index] < other[index]) return false;
@@ -126,7 +130,7 @@ namespace mystd {
                 return false;
             }
 
-            bool operator<(const Vector<Type>& other) {
+            bool operator<(const Vector<Type>& other) const {
                 for (size_t index = 0; index < other.size && index < size; ++index) {
                     if (array[index] > other[index]) return false;
                     else if (array[index] < other[index]) return true;
@@ -135,7 +139,7 @@ namespace mystd {
                 return false;
             }
 
-            bool operator>=(const Vector<Type>& other) {
+            bool operator>=(const Vector<Type>& other) const {
                 for (size_t index = 0; index < other.size && index < size; ++index) {
                     if (array[index] > other[index]) return true;
                     else if (array[index] < other[index]) return false;
@@ -144,7 +148,7 @@ namespace mystd {
                 return false;
             }
 
-            bool operator<=(const Vector<Type>& other) {
+            bool operator<=(const Vector<Type>& other) const{
                 for (size_t index = 0; index < other.size && index < size; ++index) {
                     if (array[index] < other[index]) return true;
                     else if (array[index] > other[index]) return false;
@@ -157,8 +161,8 @@ namespace mystd {
                 if (size >= new_size) {
                     size = new_size;
                 } else {
-                    if (real_size < new_size) {
-                        real_size = new_size;
+                    if (real_size < new_size + 1) {
+                        real_size = new_size + 1;
                         Type* new_array = new Type[real_size];
                         for (size_t index = 0; index < size; ++index) {
                             new_array[index] = array[index];
@@ -168,14 +172,15 @@ namespace mystd {
                     }
                     size = new_size;
                 }
+                array[size] = Type();
             }
 
             void Resize(const size_t new_size, const Type& value) {
                 if (size >= new_size) {
                     size = new_size;
                 } else {
-                    if (real_size < new_size) {
-                        real_size = new_size;
+                    if (real_size < new_size + 1) {
+                        real_size = new_size + 1;
                         Type* new_array = new Type[real_size];
                         for (size_t index = 0; index < size; ++index) {
                             new_array[index] = array[index];
@@ -188,6 +193,7 @@ namespace mystd {
                     }
                     size = new_size;
                 }
+                array[size] = Type();
             }
 
             void Reverse() {
@@ -211,7 +217,7 @@ namespace mystd {
             }
 
             void PushBack(const Type& value = Type()) {
-                if (size == real_size) {
+                if (size + 1 == real_size) {
                     real_size *= 2;
                     Type* new_array = new Type[real_size];
                     for (size_t index = 0; index < size; ++index) {
@@ -222,6 +228,7 @@ namespace mystd {
                 }
                 array[size] = value;
                 ++size;
+                array[size] = Type();
             }
 
             void PopBack() {
@@ -229,6 +236,7 @@ namespace mystd {
                     throw Exception("Передано значение за пределом вектора PopBack", 1);
                 }
                 --size;
+                array[size] = Type();
             }
 
             size_t Size() const {
@@ -243,7 +251,7 @@ namespace mystd {
                     PushBack(value);
                     return;
                 }
-                if (size == real_size) {
+                if (size + 1 == real_size) {
                     real_size *= 2;
                     Type* new_array = new Type[real_size];
                     for (size_t index = 0; index < size; ++index) {
@@ -257,6 +265,7 @@ namespace mystd {
                     array[index] = array[index - 1];
                 }
                 array[position] = value;
+                array[size] = Type();
             }
 
             void Insert(const size_t begin, const size_t end, const Type& value = Type()) {
@@ -270,7 +279,7 @@ namespace mystd {
                     return;
                 }
                 size += end - begin;
-                while (size > real_size) {
+                while (size + 1 > real_size) {
                     real_size *= 2;
                     Type* new_array = new Type[real_size];
                     for (size_t index = 0; index < size - (end - begin); ++index) {
@@ -285,6 +294,7 @@ namespace mystd {
                 for (size_t index = begin; index < end; ++index) {
                     array[index] = value;
                 }
+                array[size] = Type();
             }
 
             void Erase(const size_t position) {
@@ -295,6 +305,7 @@ namespace mystd {
                     array[index - 1] = array[index];
                 }
                 --size;
+                array[size] = Type();
             }
 
             void Erase(const size_t begin, const size_t end) {
@@ -305,7 +316,8 @@ namespace mystd {
                     array[index - (end - begin)] = array[index];
                 }
                 size -= (end - begin);
-            } // протестировано.
+                array[size] = Type();
+            } //FIXME: протестировано.
 
             Type Top() const {
                 if (size == 0) {
@@ -327,6 +339,7 @@ namespace mystd {
                 size = 0;
                 array = new Type[size + 1];
                 real_size = size + 1;
+                array[size] = Type();
             }
 
             void Swap(const size_t position1, const size_t position2) {
@@ -530,17 +543,6 @@ namespace mystd {
                 }
             }
 
-            Vector<Type> SubLine(const size_t begin, const size_t end) const {
-                if (begin > end || end > size) {
-                    throw Exception("Передано значение за пределом вектора, SubLine", 1);
-                }
-                Vector<Type> new_vector(end - begin);
-                for (size_t index = 0; index < new_vector.Size(); ++index) {
-                    new_vector[index] = array[index + begin];
-                }
-                return new_vector;
-            }
-
             size_t Count(const Type& value) const {
 
                 size_t quantity = 0;
@@ -610,6 +612,10 @@ namespace mystd {
                 }
                 if (array[index] != value) index = end;
                 return index;
+            }
+            
+            Type* Data() const {
+                return array;
             }
             
         private:

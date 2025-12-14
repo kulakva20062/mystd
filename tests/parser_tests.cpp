@@ -1,8 +1,6 @@
-#include "exception.hpp"
-#include "parser.hpp"
+#include "../lib/exception.hpp"
+#include "../lib/parser.hpp"
 #include <gtest/gtest.h>
-#include <string>
-#include <vector>
 
 using namespace mystd;
 
