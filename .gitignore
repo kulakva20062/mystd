@@ -2,3 +2,5 @@
 .cache
 build
 build-asan
+idea
+trash
