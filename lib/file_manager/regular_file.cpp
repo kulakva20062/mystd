@@ -7,6 +7,10 @@
 
 namespace fs = std::filesystem;
 
+RegularFile::~RegularFile() {
+    Close();
+}
+
 fs::path RegularFile::GetStem() const {
     return GetPath().stem();
 }
@@ -36,6 +40,7 @@ bool RegularFile::IsOpen() {
 }
 
 void RegularFile::Open(){
+    CreateFile();
     if (is_open_) return;
     FILE* file = fopen(GetPath().c_str(), "rb");
     if(!file) {
@@ -56,6 +61,16 @@ void RegularFile::Open(){
 
 void RegularFile::Close() {
     is_open_ = false;
+
+    DeleteFile();
+    CreateFile();
+    FILE* file = fopen(GetPath().c_str(), "wb");
+    if(!file) {
+        throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
+    }
+    fwrite(data_.data(), sizeof(std::byte), data_.size(), file);
+
+    fclose(file);
     data_.resize(0);
 }
 
@@ -65,16 +80,17 @@ void RegularFile::CheckOpen() {
     }
 }
 
-const std::vector<std::byte>& RegularFile::Data() {
+std::vector<std::byte>& RegularFile::Data() {
     if (!is_open_) {
         Open();
     }
     return data_;
 }
 
-void RegularFile::CopyFile(RegularFile& other_file) const{
+void RegularFile::CopyFile(RegularFile& other_file) const {
     bool start_open = other_file.IsOpen();
     other_file.Open();
+    CreateFile();
     FILE* file = fopen(GetPath().c_str(), "wb");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);

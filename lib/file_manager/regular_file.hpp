@@ -9,7 +9,7 @@ class RegularFile : public File {
     public:
         RegularFile(const fs::path& file_path, bool is_open = false);
 
-        ~RegularFile() = default;
+        ~RegularFile();
 
         RegularFile(RegularFile& other, const fs::path& file_path, bool is_open = false); 
 
@@ -19,11 +19,14 @@ class RegularFile : public File {
 
         fs::path GetExtension() const;
 
+        void DeleteFile();
+
+    protected:
         void Open();
 
         void Close();
 
-        const std::vector<std::byte>& Data();
+        std::vector<std::byte>& Data();
 
         bool IsOpen();
 
@@ -34,8 +37,6 @@ class RegularFile : public File {
         void CheckOpen();
 
         void CreateFile() const;
-
-        void DeleteFile();
 
         void CopyFile(RegularFile& other_file) const;
 };
