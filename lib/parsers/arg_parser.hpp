@@ -10,7 +10,7 @@ namespace mystd {
         kDelayedOptional = 1,       // Отложенная, необязательная  
         kDelayedZeroOrMore = 2,     // Отложенная, ноль или более
         kImmediateZeroOrMore = 3,   // Немедленная, ноль или более
-        kCommandOnly = 4,            // Только команда
+        kCommandOnly = 4,           // Только команда
         kRemainingArguments = 5     // Всё оставшееся
     };
  
