@@ -22,7 +22,7 @@ fs::path RegularFile::GetExtension() const {
 void RegularFile::CreateFile() const {
     if(Exists(GetPath())) return;
     fs::create_directories(GetParentPath());
-    FILE* file = fopen(GetFileName().c_str(), "ab");
+    FILE* file = fopen(GetPath().string().c_str(), "ab");
     if(!file) {
         throw mystd::Exception("Не удалось создать несуществующий файл, class RegularFile", 0);
     }
@@ -35,14 +35,14 @@ void RegularFile::DeleteFile() {
     fs::remove(GetPath());
 }
 
-bool RegularFile::IsOpen() {
+bool RegularFile::IsOpen() const {
     return is_open_;
 }
 
 void RegularFile::Open(){
     CreateFile();
     if (is_open_) return;
-    FILE* file = fopen(GetPath().c_str(), "rb");
+    FILE* file = fopen(GetPath().string().c_str(), "rb");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
     }
@@ -60,11 +60,13 @@ void RegularFile::Open(){
 }
 
 void RegularFile::Close() {
+    if (!is_open_) return; 
+    
     is_open_ = false;
 
     DeleteFile();
     CreateFile();
-    FILE* file = fopen(GetPath().c_str(), "wb");
+    FILE* file = fopen(GetPath().string().c_str(), "wb");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
     }
@@ -87,11 +89,11 @@ std::vector<std::byte>& RegularFile::Data() {
     return data_;
 }
 
-void RegularFile::CopyFile(RegularFile& other_file) const {
+void RegularFile::CopyFile(RegularFile& other_file){
     bool start_open = other_file.IsOpen();
     other_file.Open();
     CreateFile();
-    FILE* file = fopen(GetPath().c_str(), "wb");
+    FILE* file = fopen(GetPath().string().c_str(), "wb");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
     }

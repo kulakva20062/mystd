@@ -1,8 +1,13 @@
+#pragma once
 #include <filesystem> 
 
 namespace fs = std::filesystem;
 
 bool Exists(fs::path);
+
+bool IsDirectory(fs::path);
+
+bool IsRegularFile(fs::path);
 
 class File {
     public:
@@ -19,6 +24,14 @@ class File {
         fs::path GetFileName() const;
 
         fs::path GetParentPath() const;
+
+        virtual void DeleteFile();
+
+        virtual void Close();
+
+        virtual void Open();
+
+        virtual bool IsOpen() const;
 
     protected:
         void SetPath(const fs::path& new_file_path);

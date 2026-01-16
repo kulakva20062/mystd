@@ -1,3 +1,4 @@
+#pragma once
 #include "file.hpp"
 #include <cstddef>
 #include <vector>
@@ -19,16 +20,15 @@ class RegularFile : public File {
 
         fs::path GetExtension() const;
 
-        void DeleteFile();
+        void DeleteFile() override;
 
-    protected:
-        void Open();
+        void Close() override;
 
-        void Close();
+        void Open() override;
+
+        bool IsOpen() const override;
 
         std::vector<std::byte>& Data();
-
-        bool IsOpen();
 
     private:
         bool is_open_;
@@ -38,5 +38,5 @@ class RegularFile : public File {
 
         void CreateFile() const;
 
-        void CopyFile(RegularFile& other_file) const;
+        void CopyFile(RegularFile& other_file);
 };
