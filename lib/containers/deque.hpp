@@ -45,7 +45,17 @@ namespace mystd {
                 }
             }
 
-            Deque operator=(const Deque<Type>& other) {
+            Deque(Deque<Type>&& other) noexcept
+                :size(other.size)
+                ,first_in_line(other.first_in_line)
+                ,last_in_line(other.last_in_line)
+            {
+                other.size = 0;
+                other.first_in_line = nullptr;
+                other.last_in_line = nullptr;
+            }
+
+            Deque& operator=(const Deque<Type>& other) {
                 if (this == &other) {
                     return *this;
                 }
@@ -62,6 +72,20 @@ namespace mystd {
                     }
                     cur_node = cur_node->next_node;
                 }
+                return *this;
+            }
+
+            Deque& operator=(Deque<Type>&& other) noexcept {
+                if (this == &other) {
+                    return *this;
+                }
+                DeleteDeque();
+                size = other.size;
+                first_in_line = other.first_in_line;
+                last_in_line = other.last_in_line;
+                other.size = 0;
+                other.first_in_line = nullptr;
+                other.last_in_line = nullptr;
                 return *this;
             }
 

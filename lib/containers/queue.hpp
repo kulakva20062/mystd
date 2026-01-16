@@ -27,7 +27,7 @@ namespace mystd {
             }
 
             Queue(const Queue<Type>& other) 
-                :size(size)
+                :size(other.size)
                 ,first_in_line(nullptr)
                 ,last_in_line(nullptr)
             {
@@ -41,6 +41,16 @@ namespace mystd {
                     last_in_line->next_node = new Node{.data = cur_node->data};
                     last_in_line = last_in_line->next_node;
                 }
+            }
+
+            Queue(Queue<Type>&& other) noexcept
+                :size(other.size)
+                ,first_in_line(other.first_in_line)
+                ,last_in_line(other.last_in_line)
+            {
+                other.size = 0;
+                other.first_in_line = nullptr;
+                other.last_in_line = nullptr;
             }
 
             Queue& operator=(const Queue<Type>& other) {
@@ -59,6 +69,20 @@ namespace mystd {
                     last_in_line->next_node = new Node{.data = cur_node->data};
                     last_in_line = last_in_line->next_node;
                 }
+                return *this;
+            }
+
+            Queue& operator=(Queue<Type>&& other) noexcept {
+                if (this == &other) {
+                    return *this;
+                }
+                DeleteQueue();
+                size = other.size;
+                first_in_line = other.first_in_line;
+                last_in_line = other.last_in_line;
+                other.size = 0;
+                other.first_in_line = nullptr;
+                other.last_in_line = nullptr;
                 return *this;
             }
 

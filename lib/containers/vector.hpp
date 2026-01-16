@@ -34,6 +34,16 @@ namespace mystd {
                 array[size] = Type();
             }
 
+            Vector(Vector<Type>&& other) noexcept
+                :size(other.size)
+                ,real_size(other.real_size)
+                ,array(other.array)
+            {
+                other.array = nullptr;
+                other.size = 0;
+                other.real_size = 0;
+            }
+
             Vector<Type>& operator=(const Vector<Type>& other) {
                 if (&other == this) {
                     return *this;
@@ -46,6 +56,20 @@ namespace mystd {
                     array[index] = other.array[index];
                 }
                 array[size] = Type();
+                return *this;
+            }
+
+            Vector<Type>& operator=(Vector<Type>&& other) noexcept {
+                if (&other == this) {
+                    return *this;
+                }
+                delete[] array;
+                size = other.size;
+                real_size = other.real_size;
+                array = other.array;
+                other.size = 0;
+                other.real_size = 0;
+                other.array = nullptr;
                 return *this;
             }
 

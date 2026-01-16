@@ -13,7 +13,7 @@ class File {
     public:
         File(const fs::path& file_path);
 
-        ~File() = default;
+        virtual  ~File() = default;
 
         File(const File& other) = delete;
 
