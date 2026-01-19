@@ -10,7 +10,7 @@ class RegularFile : public File {
     public:
         RegularFile(const fs::path& file_path, bool is_open = false);
 
-        ~RegularFile() override;
+        virtual ~RegularFile() override;
 
         RegularFile(RegularFile& other, const fs::path& file_path, bool is_open = false); 
 

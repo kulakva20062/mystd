@@ -10,7 +10,7 @@ class DirFile : public File {
     public:
         DirFile(const fs::path& file_path, bool is_open = false);
 
-        ~DirFile() override;
+        virtual ~DirFile() override;
 
         DirFile(DirFile& other, const fs::path& file_path, bool is_open = false);
 

@@ -4,15 +4,12 @@ project(mystd LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_COMPILER g++)
 
-# Добавьте lib в include пути
-include_directories(lib)
-
-# Создайте библиотеку
+# Создайте библиотеки
 add_subdirectory(lib)
 
 # Исполняемый файл
-add_executable(Testlib bin/main.cpp)
-target_link_libraries(Testlib PRIVATE mystd)
+add_executable(mystd bin/main.cpp)
+target_link_libraries(mystd PRIVATE mystd_lib)
 
 # Тесты (если есть)
 enable_testing()

@@ -21,7 +21,10 @@ fs::path RegularFile::GetExtension() const {
 
 void RegularFile::CreateFile() const {
     if(Exists(GetPath())) return;
-    fs::create_directories(GetParentPath());
+    fs::path parent_path = GetParentPath();
+    if(!parent_path.empty()) {
+        fs::create_directories(parent_path);
+    }
     FILE* file = fopen(GetPath().string().c_str(), "ab");
     if(!file) {
         throw mystd::Exception("Не удалось создать несуществующий файл, class RegularFile", 0);

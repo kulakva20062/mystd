@@ -8,7 +8,10 @@ void DirFile::CreateFile() const {
     if (Exists(GetPath())) {
         return;
     }
-    fs::create_directories(GetPath());
+    fs::path path = GetPath();
+    if(!path.empty()) {
+        fs::create_directories(path);
+    }
 }
 
 void DirFile::Open() {

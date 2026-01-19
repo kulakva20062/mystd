@@ -1,10 +1,10 @@
 #include "containers/string.hpp"
-#include <cstring>
+#include "loggers/logger.hpp"
 #include <iostream>
 
 int main() {
-    mystd::String str;
-    if (str == "Hello") {
-        std::cout << "Hello World!";
-    }
+    Logger Logger("log.txt");
+    Logger.Log("Hello World!");
+
+    Logger.Log("Hello World! 2");
 }

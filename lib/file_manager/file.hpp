@@ -13,7 +13,7 @@ class File {
     public:
         File(const fs::path& file_path);
 
-        virtual  ~File() = default;
+        virtual ~File() = default;
 
         File(const File& other) = delete;
 
@@ -25,13 +25,13 @@ class File {
 
         fs::path GetParentPath() const;
 
-        virtual void DeleteFile();
+        virtual void DeleteFile() = 0;
 
-        virtual void Close();
+        virtual void Close() = 0;
 
-        virtual void Open();
+        virtual void Open() = 0;
 
-        virtual bool IsOpen() const;
+        virtual bool IsOpen() const = 0;
 
     protected:
         void SetPath(const fs::path& new_file_path);
