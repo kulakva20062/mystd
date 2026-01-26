@@ -1,11 +1,9 @@
-# Библиотека исключений
 add_library(mystd_exception
     exception.hpp
     exception.cpp
 )
 target_include_directories(mystd_exception PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Библиотека контейнеров
 add_library(mystd_containers
     containers/deque.hpp
     containers/queue.hpp
@@ -16,7 +14,6 @@ add_library(mystd_containers
 target_include_directories(mystd_containers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(mystd_containers PUBLIC mystd_exception)
 
-# Библиотека парсеров (зависит от контейнеров)
 add_library(mystd_parsers
     parsers/arg_parser.hpp
     parsers/arg_parser.cpp
@@ -24,7 +21,6 @@ add_library(mystd_parsers
 target_include_directories(mystd_parsers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(mystd_parsers PUBLIC mystd_containers)
 
-# Библиотека файлового менеджера
 add_library(mystd_file_manager
     file_manager/dir_file.hpp
     file_manager/dir_file.cpp
@@ -38,7 +34,6 @@ add_library(mystd_file_manager
 target_include_directories(mystd_file_manager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(mystd_file_manager PUBLIC mystd_exception)
 
-# Библиотека логгеров
 add_library(mystd_logers
     loggers/logger.hpp
     loggers/logger.cpp
@@ -46,7 +41,6 @@ add_library(mystd_logers
 target_include_directories(mystd_logers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(mystd_logers PUBLIC mystd_file_manager)
 
-# Главная библиотека, объединяющая все компоненты
 add_library(mystd_lib INTERFACE)
 target_link_libraries(mystd_lib INTERFACE 
     mystd_exception

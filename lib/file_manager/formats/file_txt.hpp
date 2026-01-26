@@ -1,3 +1,4 @@
+#pragma once
 #include "../regular_file.hpp"
 #include <filesystem>
 #include <string>

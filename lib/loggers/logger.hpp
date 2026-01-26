@@ -1,3 +1,4 @@
+#pragma once
 #include "../file_manager/formats/file_txt.hpp"
 #include <filesystem>
 
