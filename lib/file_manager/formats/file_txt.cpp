@@ -18,13 +18,7 @@ FileTxt& FileTxt::operator=(FileTxt& other)
 
 FileTxt& FileTxt::operator+=(const std::string& message)
 {
-    Open();
-    auto& data = RegularFile::Data();
-    for (char c : message) {
-        data.push_back(static_cast<std::byte>(c));
-    }
-    data.push_back(static_cast<std::byte>('\n'));
-    Close();
+    RegularFile::operator+=(message + "\n");
     return *this;
 }
 

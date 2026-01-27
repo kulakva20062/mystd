@@ -1,7 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <iostream>
-#include "exception.hpp"
+#include "../../exception.hpp"
 
 namespace mystd {
 

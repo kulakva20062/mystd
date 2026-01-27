@@ -24,10 +24,34 @@ target_include_directories(logger_test
     ${CMAKE_SOURCE_DIR}/lib
 )
 
+add_executable(arg_parser_test
+    arg_parser_test.cpp
+)
+
+target_link_libraries(arg_parser_test
+    PRIVATE
+    mystd_parsers
+    mystd_exception
+    GTest::gtest
+    GTest::gtest_main
+)
+
+target_include_directories(arg_parser_test
+    PRIVATE
+    ${CMAKE_SOURCE_DIR}/lib
+)
+
 include(GoogleTest)
 gtest_discover_tests(logger_test
     DISCOVER_TESTS_OPTIONS
         "--gtest_list_tests"
     PROPERTIES
         LABELS "Logger"
+)
+
+gtest_discover_tests(arg_parser_test
+    DISCOVER_TESTS_OPTIONS
+        "--gtest_list_tests"
+    PROPERTIES
+        LABELS "ArgParser"
 )

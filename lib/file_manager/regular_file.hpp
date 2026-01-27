@@ -16,6 +16,10 @@ class RegularFile : public File {
 
         RegularFile& operator=(RegularFile& other);
 
+        RegularFile& operator+=(const std::vector<std::byte>& message);
+
+        RegularFile& operator+=(const std::string& message);
+
         fs::path GetStem() const;
 
         fs::path GetExtension() const;

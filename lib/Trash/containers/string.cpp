@@ -1,6 +1,6 @@
 #include "string.hpp"
 #include "vector.hpp"
-#include "exception.hpp"
+#include "../../exception.hpp"
 #include <cstring>
 #include <cstdint>
 

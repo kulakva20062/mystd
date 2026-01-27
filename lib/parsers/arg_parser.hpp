@@ -1,6 +1,6 @@
 #pragma once
-#include "containers/string.hpp"
-#include "containers/vector.hpp"
+#include <string>
+#include <vector>
 #include <cstddef>
 
 namespace mystd {
@@ -38,21 +38,21 @@ namespace mystd {
 
             size_t ArgumentSize (const char* name);
 
-            const String& GetArgumentValue (const char* name, size_t index);
+            const std::string& GetArgumentValue (const char* name, size_t index);
 
         private:
             struct Node {
-                Vector<String> vector;
+                std::vector<std::string> vector;
 
-                const String small_name;
-                const String long_name;
-                const String name;
+                const std::string small_name;
+                const std::string long_name;
+                const std::string name;
                 Nargs narg;
                 Node* next_node;
                 bool is_involved;
                 bool to_read;
                 
-                Node(const String& small_name, const String& long_name, const String& name, Nargs narg)
+                Node(const std::string& small_name, const std::string& long_name, const std::string& name, Nargs narg)
                     : vector()
                     , small_name(small_name)
                     , long_name(long_name)
