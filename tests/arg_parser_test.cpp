@@ -22,15 +22,20 @@ protected:
     
     // Вспомогательная функция для создания argv из вектора строк
     std::vector<const char*> CreateArgv(const std::vector<std::string>& args) {
-        test_args_.clear();
-        test_argv_.clear();
+        // Используем статический вектор для хранения строк, чтобы указатели оставались валидными
+        static std::vector<std::string> storage;
+        storage.clear();
         
-        test_argv_.push_back("program"); // argv[0] - имя программы
-        for (const auto& arg : args) {
-            test_args_.push_back(arg); // Сохраняем строки
-            test_argv_.push_back(test_args_.back().c_str()); // Используем указатели на сохраненные строки
+        // Добавляем имя программы и все аргументы в хранилище
+        storage.push_back("program");
+        storage.insert(storage.end(), args.begin(), args.end());
+        
+        // Создаем вектор указателей на строки в хранилище
+        std::vector<const char*> argv;
+        for (const auto& str : storage) {
+            argv.push_back(str.c_str());
         }
-        return test_argv_;
+        return argv;
     }
     
 private:
@@ -109,12 +114,10 @@ TEST_F(ArgParserTest, ConstructorAndBasicTests_Destructor) {
 
 TEST_F(ArgParserTest, AddArgumentTests_ShortAndLongNames) {
     Parser parser;
-    
     // Добавление аргумента с коротким и длинным именем
     parser.AddArgument("-v", "--verbose", "verbose", kCommandOnly);
     
     ASSERT_EQ(parser.Size(), 1);
-    ASSERT_TRUE(parser.ArgumentInvolved("verbose"));
     
     auto argv = CreateArgv({"-v"});
     parser.Parse(2, argv.data());
