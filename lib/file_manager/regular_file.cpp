@@ -126,28 +126,24 @@ RegularFile& RegularFile::operator=(RegularFile& other) {
 }
 
 RegularFile& RegularFile::operator+=(const std::vector<std::byte>& message) {
-    Open();
+    CreateFile();
     FILE* file = fopen(GetPath().string().c_str(), "ab");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
     }
     fwrite(message.data(), sizeof(std::byte), message.size(), file);
     fclose(file);
-    data_.insert(data_.end(), message.begin(), message.end());
     return *this;
 }
 
 RegularFile& RegularFile::operator+=(const std::string& message) {
-    Open();
+    CreateFile();
     FILE* file = fopen(GetPath().string().c_str(), "ab");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
     }
     fwrite(message.c_str(), sizeof(char), message.size(), file);
     fclose(file);
-    for (char c : message) {
-        data_.push_back(static_cast<std::byte>(c));
-    }
     return *this;
 }
 

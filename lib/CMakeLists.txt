@@ -30,11 +30,18 @@ add_library(mystd_logers
 target_include_directories(mystd_logers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(mystd_logers PUBLIC mystd_file_manager)
 
+add_library(mystd_time
+    time/time.hpp
+    time/time.cpp
+)
+target_include_directories(mystd_time PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_library(mystd_lib INTERFACE)
 target_link_libraries(mystd_lib INTERFACE 
     mystd_exception
     mystd_parsers
     mystd_file_manager
     mystd_logers
+    mystd_time
 )
 target_include_directories(mystd_lib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
