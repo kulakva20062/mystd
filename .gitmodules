@@ -1,3 +1,0 @@
-[submodule "lib/window_manager/imgui"]
-	path = lib/window_manager/imgui
-	url = git@github.com:ocornut/imgui.git
