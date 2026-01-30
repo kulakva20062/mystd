@@ -17,9 +17,9 @@ class FileTxt final : protected RegularFile {
 
         FileTxt& operator+=(const std::string& message);
 
-        inline void Clear();
+        void Clear();
 
-        inline void DeleteFile();
+        void DeleteFile();
 
         void DeleteComments(const std::string& comment_chars = "#");
 
