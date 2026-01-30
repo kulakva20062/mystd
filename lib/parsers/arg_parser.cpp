@@ -27,8 +27,6 @@ namespace mystd {
         for (size_t index = 1; index < argc; ++index) {
             Node* cur_node = start_node_;
             std::string string(argv[index]);
-
-            //FIXME: Возможно стоит переписать на Очередь(Или Дек), позже будет проверено и отредактировано взависемости от скорость
             std::vector<Node*> is_involved;
             
             //Проверка на команду

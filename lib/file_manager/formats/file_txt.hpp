@@ -18,6 +18,10 @@ class FileTxt final : protected RegularFile {
         FileTxt& operator+=(const std::string& message);
 
         void Clear();
+
+        //void DeleteComments(const std::span<char>& comment_chars = std::span<char>{'#'});
+        
+        
         
 };
 
