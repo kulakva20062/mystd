@@ -34,7 +34,6 @@ void RegularFile::CreateFile() const {
 
 void RegularFile::DeleteFile() {
     if(!Exists(GetPath())) return;
-    Close();
     fs::remove(GetPath());
 }
 
@@ -43,14 +42,13 @@ bool RegularFile::IsOpen() const {
 }
 
 void RegularFile::Open(){
+    if(is_open_) return;
     CreateFile();
-    if (is_open_) return;
+
     FILE* file = fopen(GetPath().string().c_str(), "rb");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
     }
-    is_open_ = true;
-
     std::fseek(file, 0, SEEK_END);
     size_t size = std::ftell(file);
     std::fseek(file, 0, SEEK_SET);
@@ -60,12 +58,11 @@ void RegularFile::Open(){
     fread(data_.data(), sizeof(std::byte), size, file);
 
     fclose(file);
+    is_open_ = true;
 }
 
 void RegularFile::Close() {
-    if (!is_open_) return; 
-    
-    is_open_ = false;
+    if (!is_open_) return;
 
     DeleteFile();
     CreateFile();
@@ -74,21 +71,13 @@ void RegularFile::Close() {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
     }
     fwrite(data_.data(), sizeof(std::byte), data_.size(), file);
-
     fclose(file);
     data_.resize(0);
-}
-
-void RegularFile::CheckOpen() {
-    if (is_open_) {
-        Open();
-    }
+    is_open_ = false;
 }
 
 std::vector<std::byte>& RegularFile::Data() {
-    if (!is_open_) {
-        Open();
-    }
+    Open();
     return data_;
 }
 
@@ -111,32 +100,33 @@ void RegularFile::CopyFile(RegularFile& other_file){
 
 RegularFile::RegularFile(const fs::path& file_path, bool is_open) 
     :File(file_path)
-    ,is_open_(is_open)
+    ,is_open_(false)
 {
-    CreateFile();
-    CheckOpen();
+    if(is_open) {
+        Open();
+    }
 }
 
 RegularFile::RegularFile(RegularFile& other, const fs::path& file_path, bool is_open) 
     :File(file_path)
-    ,is_open_(is_open)
+    ,is_open_(false)
 {
     DeleteFile();
-    CreateFile();
     CopyFile(other);
-    is_open_ = is_open;
-    CheckOpen();
+    if(is_open) {
+        Open();
+    }
 }
 
 RegularFile& RegularFile::operator=(RegularFile& other) {
+    Close();
     DeleteFile();
-    CreateFile();
     CopyFile(other);
     return *this;
 }
 
 RegularFile& RegularFile::operator+=(const std::vector<std::byte>& message) {
-    CreateFile();
+    Open();
     FILE* file = fopen(GetPath().string().c_str(), "ab");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
@@ -148,7 +138,7 @@ RegularFile& RegularFile::operator+=(const std::vector<std::byte>& message) {
 }
 
 RegularFile& RegularFile::operator+=(const std::string& message) {
-    CreateFile();
+    Open();
     FILE* file = fopen(GetPath().string().c_str(), "ab");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);

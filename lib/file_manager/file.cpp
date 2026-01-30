@@ -15,6 +15,10 @@ bool IsRegularFile(fs::path file_path) {
     return fs::is_regular_file(file_path);
 }
 
+fs::path File::Absolute() const {
+    return fs::absolute(file_path_);
+}
+
 File::File(const fs::path& file_path) 
     :file_path_(file_path)
 {}

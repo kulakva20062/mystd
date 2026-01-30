@@ -25,6 +25,8 @@ class File {
 
         fs::path GetParentPath() const;
 
+        fs::path Absolute() const;
+
         virtual void DeleteFile() = 0;
 
         virtual void Close() = 0;

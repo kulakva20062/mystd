@@ -38,8 +38,6 @@ class RegularFile : public File {
         bool is_open_;
         std::vector<std::byte> data_;
 
-        void CheckOpen();
-
         void CreateFile() const;
 
         void CopyFile(RegularFile& other_file);

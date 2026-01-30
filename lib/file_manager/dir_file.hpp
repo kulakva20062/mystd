@@ -16,6 +16,10 @@ class DirFile : public File {
 
         DirFile& operator=(DirFile& other);
 
+        DirFile& operator+=(const std::vector<std::byte>& message);
+
+        DirFile& operator+=(const std::string& message);
+
         void DeleteFile() override;
 
         void Open() override;
@@ -29,8 +33,6 @@ class DirFile : public File {
     private:
         bool is_open_;
         std::vector<std::unique_ptr<RegularFile>> files_;
-
-        void CheckOpen();
 
         void CreateFile() const;
 

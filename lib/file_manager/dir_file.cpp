@@ -15,17 +15,18 @@ void DirFile::CreateFile() const {
 }
 
 void DirFile::Open() {
-    CreateFile();
     if (is_open_) {
         return;
     }
+
+    CreateFile();
 
     for (const auto& entry : fs::directory_iterator(GetPath())) {
         if (fs::is_regular_file(entry)) {
             files_.push_back(std::make_unique<RegularFile>(entry.path(), false));
         }
     }
-    
+
     is_open_ = true;
 }
 
@@ -44,12 +45,6 @@ void DirFile::Close() {
 
 bool DirFile::IsOpen() const {
     return is_open_;
-}
-
-void DirFile::CheckOpen() {
-    if (is_open_) {
-        Open();
-    }
 }
 
 void DirFile::CopyFile(DirFile& other_file) {
@@ -80,10 +75,12 @@ std::vector<std::unique_ptr<RegularFile>>& DirFile::Data() {
 
 DirFile::DirFile(const fs::path& file_path, bool is_open)
     :File(file_path)
-    ,is_open_(is_open)
+    ,is_open_(false)
 {
     CreateFile();
-    CheckOpen();
+    if(is_open) {
+        Open();
+    }
 }
 
 DirFile::~DirFile() {
@@ -92,18 +89,33 @@ DirFile::~DirFile() {
 
 DirFile::DirFile(DirFile& other, const fs::path& file_path, bool is_open)
     :File(file_path)
-    ,is_open_(is_open)
+    ,is_open_(false)
 {
     DeleteFile();
-    CreateFile();
     CopyFile(other);
-    is_open_ = is_open;
-    CheckOpen();
+    if(is_open) {
+        Open();
+    }
 }
 
 DirFile& DirFile::operator=(DirFile& other) {
     DeleteFile();
-    CreateFile();
     CopyFile(other);
+    return *this;
+}
+
+DirFile& DirFile::operator+=(const std::vector<std::byte>& message) {
+    Open();
+    for (auto& file : files_) {
+        *file += message;
+    }
+    return *this;
+}
+
+DirFile& DirFile::operator+=(const std::string& message) {
+    Open();
+    for (auto& file : files_) {
+        *file += message;
+    }
     return *this;
 }
