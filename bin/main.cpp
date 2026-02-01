@@ -3,7 +3,6 @@
 int main() {
     Logger logger;
     logger.Log("Hello, world!", 0);
-    logger.Log("Hello, world!", 1);
-    logger.CleanLogs(2, 2);
+    logger.Log("critical error", 20);
     return 0;
 }

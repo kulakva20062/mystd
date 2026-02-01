@@ -22,7 +22,7 @@ void DirFile::Open() {
 
     CreateFile();
 
-    //TODO: Добавить обработку файлов других форматов (не знаю как сделать универсально)
+    //TODO: Добавить обработку файлов других форматов ( не знаю как сделать универсально )
     for (const auto& entry : fs::directory_iterator(GetPath())) {
         if (fs::is_regular_file(entry)) {
             if (entry.path().extension() == ".log") {
