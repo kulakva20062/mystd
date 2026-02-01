@@ -15,6 +15,8 @@ add_executable(logger_test
 target_link_libraries(logger_test
     PRIVATE
     mystd_logers
+    mystd_time
+    mystd_exception
     GTest::gtest
     GTest::gtest_main
 )

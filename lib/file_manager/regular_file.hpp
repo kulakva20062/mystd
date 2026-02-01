@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <vector>
 #include <filesystem>
+#include <string_view>
 
 namespace fs = std::filesystem;
 
@@ -18,7 +19,7 @@ class RegularFile : public File {
 
         RegularFile& operator+=(const std::vector<std::byte>& message);
 
-        RegularFile& operator+=(const std::string& message);
+        RegularFile& operator+=(std::string_view message);
 
         fs::path GetStem() const;
 
@@ -27,6 +28,8 @@ class RegularFile : public File {
         void DeleteFile() override;
 
         void Close() override;
+
+    protected:
 
         void Open() override;
 

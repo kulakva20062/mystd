@@ -136,13 +136,13 @@ RegularFile& RegularFile::operator+=(const std::vector<std::byte>& message) {
     return *this;
 }
 
-RegularFile& RegularFile::operator+=(const std::string& message) {
+RegularFile& RegularFile::operator+=(std::string_view message) {
     CreateFile();
     FILE* file = fopen(GetPath().string().c_str(), "ab");
     if(!file) {
         throw mystd::Exception("Файл был создан, открыть его не удалось, возможно он был удалён, class RegularFile", 1);
     }
-    fwrite(message.c_str(), sizeof(char), message.size(), file);
+    fwrite(message.data(), sizeof(char), message.size(), file);
     fclose(file);
     return *this;
 }

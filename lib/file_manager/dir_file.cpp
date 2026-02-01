@@ -1,5 +1,6 @@
 #include "dir_file.hpp"
 #include "regular_file.hpp"
+#include "formats/file_log.hpp"
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -21,9 +22,16 @@ void DirFile::Open() {
 
     CreateFile();
 
+    //TODO: Добавить обработку файлов других форматов (не знаю как сделать универсально)
     for (const auto& entry : fs::directory_iterator(GetPath())) {
         if (fs::is_regular_file(entry)) {
-            files_.push_back(std::make_unique<RegularFile>(entry.path(), false));
+            if (entry.path().extension() == ".log") {
+                files_.push_back(std::make_unique<FileLog>(entry.path()));
+            } else if (entry.path().extension() == ".txt") {
+                files_.push_back(std::make_unique<FileTxt>(entry.path()));
+            } else {
+                files_.push_back(std::make_unique<RegularFile>(entry.path(), false));
+            }
         }
     }
 
@@ -112,7 +120,7 @@ DirFile& DirFile::operator+=(const std::vector<std::byte>& message) {
     return *this;
 }
 
-DirFile& DirFile::operator+=(const std::string& message) {
+DirFile& DirFile::operator+=(std::string_view message) {
     Open();
     for (auto& file : files_) {
         *file += message;

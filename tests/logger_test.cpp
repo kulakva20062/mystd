@@ -1,609 +1,571 @@
 #include <gtest/gtest.h>
-#include "../lib/loggers/logger.hpp"
-#include <fstream>
+#include "loggers/logger.hpp"
 #include <filesystem>
+#include <fstream>
 #include <string>
-#include <sstream>
+#include <vector>
+#include <atomic>
+#include <cstdlib>
+#include <thread>
+#include <chrono>
 
 namespace fs = std::filesystem;
+
+static std::vector<std::string> ReadLines(const fs::path& p) {
+    std::ifstream f(p.string());
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(f, line)) {
+        lines.push_back(line);
+    }
+    return lines;
+}
+
+static size_t CountFilesWithExtension(const fs::path& dir, const std::string& ext) {
+    size_t n = 0;
+    for (const auto& entry : fs::directory_iterator(dir)) {
+        if (entry.is_regular_file() && entry.path().extension() == ext) {
+            ++n;
+        }
+    }
+    return n;
+}
 
 class LoggerTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Создаем временную директорию для тестовых файлов
-        test_dir_ = fs::temp_directory_path() / "logger_test";
+        test_dir_ = fs::temp_directory_path() / ("logger_test_" + std::to_string(s_counter_++));
         fs::create_directories(test_dir_);
+        log_path_ = test_dir_ / "test.log";
     }
-    
+
     void TearDown() override {
-        // Удаляем временную директорию и все файлы
         if (fs::exists(test_dir_)) {
             fs::remove_all(test_dir_);
         }
     }
-    
-    std::string ReadFileContent(const fs::path& path) {
-        std::ifstream file(path, std::ios::binary);
-        if (!file.is_open()) {
-            return "";
-        }
-        
-        std::ostringstream buffer;
-        buffer << file.rdbuf();
-        return buffer.str();
-    }
-    
-    fs::path GetTestFilePath(const std::string& filename) {
-        return test_dir_ / filename;
-    }
-    
-    void CreateFileWithContent(const fs::path& path, const std::string& content) {
-        std::ofstream file(path, std::ios::binary);
-        if (file.is_open()) {
-            file << content;
-        }
-    }
-    
+
     fs::path test_dir_;
+    fs::path log_path_;
+
+private:
+    static std::atomic<unsigned> s_counter_;
 };
 
-// ============================================================================
-// Группа 1: ConstructorTests - тестирование конструктора
-// ============================================================================
-
-TEST_F(LoggerTest, ConstructorTests_NewFile) {
-    fs::path test_file = GetTestFilePath("new_file.log");
-    
-    // Создание логгера с новым файлом
-    Logger logger(test_file);
-    
-    // Файл должен быть создан и очищен
-    ASSERT_TRUE(fs::exists(test_file));
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "");
-}
-
-TEST_F(LoggerTest, ConstructorTests_ExistingFile) {
-    fs::path test_file = GetTestFilePath("existing_file.log");
-    
-    // Создаем файл с содержимым
-    CreateFileWithContent(test_file, "Previous content\n");
-    
-    // Создание логгера с существующим файлом
-    Logger logger(test_file);
-    
-    // Файл должен быть очищен
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "");
-}
-
-TEST_F(LoggerTest, ConstructorTests_Subdirectory) {
-    fs::path subdir = test_dir_ / "subdir";
-    fs::path test_file = subdir / "nested.log";
-    
-    // Создание логгера с файлом в поддиректории
-    Logger logger(test_file);
-    
-    // Директория и файл должны быть созданы
-    ASSERT_TRUE(fs::exists(subdir));
-    ASSERT_TRUE(fs::exists(test_file));
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "");
-}
-
-TEST_F(LoggerTest, ConstructorTests_RelativePath) {
-    fs::path test_file = "relative_test.log";
-    
-    // Создание логгера с относительным путем
-    Logger logger(test_file);
-    
-    // Файл должен быть создан
-    ASSERT_TRUE(fs::exists(test_file));
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "");
-    
-    // Очистка
-    fs::remove(test_file);
-}
-
-TEST_F(LoggerTest, ConstructorTests_AbsolutePath) {
-    fs::path test_file = GetTestFilePath("absolute.log");
-    fs::path absolute_path = fs::absolute(test_file);
-    
-    // Создание логгера с абсолютным путем
-    Logger logger(absolute_path);
-    
-    // Файл должен быть создан
-    ASSERT_TRUE(fs::exists(absolute_path));
-    std::string content = ReadFileContent(absolute_path);
-    ASSERT_EQ(content, "");
-}
+std::atomic<unsigned> LoggerTest::s_counter_{0};
 
 // ============================================================================
-// Группа 2: FileClearingTests - тестирование очистки файла при создании
+// Group 1: Constructor and initialization (5 tests)
 // ============================================================================
 
-TEST_F(LoggerTest, FileClearingTests_EmptyFile) {
-    fs::path test_file = GetTestFilePath("empty.log");
-    
-    // Создаем пустой файл
-    std::ofstream(test_file).close();
-    
-    // Создание логгера должно очистить файл
-    Logger logger(test_file);
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "");
+TEST_F(LoggerTest, ConstructorAndInit_ExplicitPathCreatesFile) {
+    Logger logger(log_path_);
+    ASSERT_TRUE(fs::exists(log_path_));
 }
 
-TEST_F(LoggerTest, FileClearingTests_FileWithContent) {
-    fs::path test_file = GetTestFilePath("with_content.log");
-    
-    // Создаем файл с содержимым
-    CreateFileWithContent(test_file, "Some content here\nMore lines\n");
-    
-    // Создание логгера должно очистить файл
-    Logger logger(test_file);
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "");
+TEST_F(LoggerTest, ConstructorAndInit_ClearsAndWritesOneLine) {
+    Logger logger(log_path_);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 1u);
 }
 
-TEST_F(LoggerTest, FileClearingTests_AfterPreviousLogs) {
-    fs::path test_file = GetTestFilePath("after_logs.log");
-    
-    // Создаем логгер и логируем что-то
+TEST_F(LoggerTest, ConstructorAndInit_FirstLineIsValidTimestamp) {
+    Logger logger(log_path_);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 1u);
+    long long t = std::atoll(lines[0].c_str());
+    ASSERT_GT(t, 0);
+}
+
+TEST_F(LoggerTest, ConstructorAndInit_RecreateOverwritesLog) {
     {
-        Logger logger(test_file);
-        logger.Log("First message");
+        Logger logger(log_path_);
+        logger.Log("first", 0);
     }
-    
-    // Создаем новый логгер - файл должен быть очищен
-    Logger logger2(test_file);
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "");
-}
-
-TEST_F(LoggerTest, FileClearingTests_RecreateLogger) {
-    fs::path test_file = GetTestFilePath("recreate.log");
-    
-    // Первый логгер
     {
-        Logger logger1(test_file);
-        logger1.Log("Message 1");
+        Logger logger(log_path_);
     }
-    
-    // Второй логгер - должен очистить файл
-    {
-        Logger logger2(test_file);
-        std::string content = ReadFileContent(test_file);
-        ASSERT_EQ(content, "");
-        
-        logger2.Log("Message 2");
-        content = ReadFileContent(test_file);
-        ASSERT_EQ(content, "Message 2\n");
-    }
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 1u);
 }
 
-TEST_F(LoggerTest, FileClearingTests_LargeContent) {
-    fs::path test_file = GetTestFilePath("large.log");
-    
-    // Создаем файл с большим содержимым
-    std::string large_content(10000, 'A');
-    CreateFileWithContent(test_file, large_content);
-    
-    // Создание логгера должно очистить файл
-    Logger logger(test_file);
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "");
-}
-
-// ============================================================================
-// Группа 3: SingleLogTests - тестирование одиночных операций логирования
-// ============================================================================
-
-TEST_F(LoggerTest, SingleLogTests_SimpleMessage) {
-    fs::path test_file = GetTestFilePath("simple.log");
-    Logger logger(test_file);
-    
-    logger.Log("Hello World");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Hello World\n");
-}
-
-TEST_F(LoggerTest, SingleLogTests_EmptyMessage) {
-    fs::path test_file = GetTestFilePath("empty_msg.log");
-    Logger logger(test_file);
-    
-    logger.Log("");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "\n");
-}
-
-TEST_F(LoggerTest, SingleLogTests_MessageWithSpaces) {
-    fs::path test_file = GetTestFilePath("spaces.log");
-    Logger logger(test_file);
-    
-    logger.Log("  Message with spaces  ");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "  Message with spaces  \n");
-}
-
-TEST_F(LoggerTest, SingleLogTests_MessageWithNewlines) {
-    fs::path test_file = GetTestFilePath("newlines.log");
-    Logger logger(test_file);
-    
-    logger.Log("Line1\nLine2\nLine3");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Line1\nLine2\nLine3\n");
-}
-
-TEST_F(LoggerTest, SingleLogTests_LongMessage) {
-    fs::path test_file = GetTestFilePath("long.log");
-    Logger logger(test_file);
-    
-    std::string long_message(1000, 'X');
-    logger.Log(long_message);
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, long_message + "\n");
-}
-
-// ============================================================================
-// Группа 4: MultipleLogTests - тестирование множественных операций логирования
-// ============================================================================
-
-TEST_F(LoggerTest, MultipleLogTests_SequentialMessages) {
-    fs::path test_file = GetTestFilePath("sequential.log");
-    Logger logger(test_file);
-    
-    logger.Log("First");
-    logger.Log("Second");
-    logger.Log("Third");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "First\nSecond\nThird\n");
-}
-
-TEST_F(LoggerTest, MultipleLogTests_SameMessages) {
-    fs::path test_file = GetTestFilePath("same.log");
-    Logger logger(test_file);
-    
-    logger.Log("Same");
-    logger.Log("Same");
-    logger.Log("Same");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Same\nSame\nSame\n");
-}
-
-TEST_F(LoggerTest, MultipleLogTests_DifferentLengths) {
-    fs::path test_file = GetTestFilePath("different_lengths.log");
-    Logger logger(test_file);
-    
-    logger.Log("A");
-    logger.Log("This is a longer message");
-    logger.Log("Medium");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "A\nThis is a longer message\nMedium\n");
-}
-
-TEST_F(LoggerTest, MultipleLogTests_ManyMessages) {
-    fs::path test_file = GetTestFilePath("many.log");
-    Logger logger(test_file);
-    
-    for (int i = 0; i < 100; ++i) {
-        logger.Log("Message " + std::to_string(i));
-    }
-    
-    std::string content = ReadFileContent(test_file);
-    std::string expected;
-    for (int i = 0; i < 100; ++i) {
-        expected += "Message " + std::to_string(i) + "\n";
-    }
-    ASSERT_EQ(content, expected);
-}
-
-TEST_F(LoggerTest, MultipleLogTests_AlternatingLengths) {
-    fs::path test_file = GetTestFilePath("alternating.log");
-    Logger logger(test_file);
-    
-    logger.Log("Short");
-    logger.Log("This is a much longer message that contains many words");
-    logger.Log("A");
-    logger.Log("Another very long message with lots of content");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Short\nThis is a much longer message that contains many words\nA\nAnother very long message with lots of content\n");
-}
-
-// ============================================================================
-// Группа 5: MessageContentTests - тестирование различного содержимого сообщений
-// ============================================================================
-
-TEST_F(LoggerTest, MessageContentTests_SpecialCharacters) {
-    fs::path test_file = GetTestFilePath("special.log");
-    Logger logger(test_file);
-    
-    logger.Log("!@#$%^&*()_+-=[]{}|;':\",./<>?");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "!@#$%^&*()_+-=[]{}|;':\",./<>?\n");
-}
-
-TEST_F(LoggerTest, MessageContentTests_Numbers) {
-    fs::path test_file = GetTestFilePath("numbers.log");
-    Logger logger(test_file);
-    
-    logger.Log("1234567890");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "1234567890\n");
-}
-
-TEST_F(LoggerTest, MessageContentTests_MixedContent) {
-    fs::path test_file = GetTestFilePath("mixed.log");
-    Logger logger(test_file);
-    
-    logger.Log("Hello123!@# World456");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Hello123!@# World456\n");
-}
-
-TEST_F(LoggerTest, MessageContentTests_TabCharacter) {
-    fs::path test_file = GetTestFilePath("tab.log");
-    Logger logger(test_file);
-    
-    logger.Log("Column1\tColumn2\tColumn3");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Column1\tColumn2\tColumn3\n");
-}
-
-TEST_F(LoggerTest, MessageContentTests_EscapedCharacters) {
-    fs::path test_file = GetTestFilePath("escaped.log");
-    Logger logger(test_file);
-    
-    logger.Log("\\n\\t\\r\\\"\\'");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "\\n\\t\\r\\\"\\'\n");
-}
-
-// ============================================================================
-// Группа 6: SequentialLoggingTests - тестирование последовательного логирования
-// ============================================================================
-
-TEST_F(LoggerTest, SequentialLoggingTests_AfterClearing) {
-    fs::path test_file = GetTestFilePath("after_clear.log");
-    
-    {
-        Logger logger(test_file);
-        logger.Log("Before clear");
-    }
-    
-    {
-        Logger logger(test_file);
-        logger.Log("After clear");
-    }
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "After clear\n");
-}
-
-TEST_F(LoggerTest, SequentialLoggingTests_WithGaps) {
-    fs::path test_file = GetTestFilePath("gaps.log");
-    Logger logger(test_file);
-    
-    logger.Log("First");
-    // Промежуток (имитация)
-    logger.Log("Second");
-    logger.Log("Third");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "First\nSecond\nThird\n");
-}
-
-TEST_F(LoggerTest, SequentialLoggingTests_InLoop) {
-    fs::path test_file = GetTestFilePath("loop.log");
-    Logger logger(test_file);
-    
-    for (int i = 1; i <= 10; ++i) {
-        logger.Log("Iteration " + std::to_string(i));
-    }
-    
-    std::string content = ReadFileContent(test_file);
-    std::string expected;
-    for (int i = 1; i <= 10; ++i) {
-        expected += "Iteration " + std::to_string(i) + "\n";
-    }
-    ASSERT_EQ(content, expected);
-}
-
-TEST_F(LoggerTest, SequentialLoggingTests_Accumulation) {
-    fs::path test_file = GetTestFilePath("accumulation.log");
-    Logger logger(test_file);
-    
-    std::string accumulated;
-    for (int i = 0; i < 5; ++i) {
-        std::string msg = "Part" + std::to_string(i);
-        logger.Log(msg);
-        accumulated += msg + "\n";
-    }
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, accumulated);
-}
-
-TEST_F(LoggerTest, SequentialLoggingTests_OrderVerification) {
-    fs::path test_file = GetTestFilePath("order.log");
-    Logger logger(test_file);
-    
-    logger.Log("1");
-    logger.Log("2");
-    logger.Log("3");
-    logger.Log("4");
-    logger.Log("5");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "1\n2\n3\n4\n5\n");
-    
-    // Проверяем порядок
-    size_t pos1 = content.find("1\n");
-    size_t pos2 = content.find("2\n");
-    size_t pos3 = content.find("3\n");
-    size_t pos4 = content.find("4\n");
-    size_t pos5 = content.find("5\n");
-    
-    ASSERT_LT(pos1, pos2);
-    ASSERT_LT(pos2, pos3);
-    ASSERT_LT(pos3, pos4);
-    ASSERT_LT(pos4, pos5);
-}
-
-// ============================================================================
-// Группа 7: FilePathTests - тестирование различных путей к файлам
-// ============================================================================
-
-TEST_F(LoggerTest, FilePathTests_CurrentDirectory) {
-    fs::path test_file = "current_dir_test.log";
-    
-    Logger logger(test_file);
-    logger.Log("Test");
-    
-    ASSERT_TRUE(fs::exists(test_file));
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Test\n");
-    
-    fs::remove(test_file);
-}
-
-TEST_F(LoggerTest, FilePathTests_Subdirectory) {
-    fs::path subdir = test_dir_ / "logs";
-    fs::path test_file = subdir / "subdir_test.log";
-    
-    Logger logger(test_file);
-    logger.Log("Subdirectory test");
-    
-    ASSERT_TRUE(fs::exists(subdir));
-    ASSERT_TRUE(fs::exists(test_file));
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Subdirectory test\n");
-}
-
-TEST_F(LoggerTest, FilePathTests_CreateDirectories) {
-    fs::path deep_path = test_dir_ / "level1" / "level2" / "level3" / "deep.log";
-    
+TEST_F(LoggerTest, ConstructorAndInit_CreatesParentDirectory) {
+    fs::path deep_path = test_dir_ / "subdir" / "nested" / "file.log";
     Logger logger(deep_path);
-    logger.Log("Deep test");
-    
     ASSERT_TRUE(fs::exists(deep_path));
-    std::string content = ReadFileContent(deep_path);
-    ASSERT_EQ(content, "Deep test\n");
-}
-
-TEST_F(LoggerTest, FilePathTests_LogExtension) {
-    fs::path test_file = GetTestFilePath("test.log");
-    
-    Logger logger(test_file);
-    logger.Log("Log extension test");
-    
-    ASSERT_TRUE(fs::exists(test_file));
-    ASSERT_EQ(test_file.extension(), ".log");
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Log extension test\n");
-}
-
-TEST_F(LoggerTest, FilePathTests_TxtExtension) {
-    fs::path test_file = GetTestFilePath("test.txt");
-    
-    Logger logger(test_file);
-    logger.Log("Txt extension test");
-    
-    ASSERT_TRUE(fs::exists(test_file));
-    ASSERT_EQ(test_file.extension(), ".txt");
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Txt extension test\n");
+    ASSERT_TRUE(fs::is_directory(deep_path.parent_path()));
 }
 
 // ============================================================================
-// Группа 8: EdgeCaseTests - тестирование граничных случаев
+// Group 2: Log() — basic logging (5 tests)
 // ============================================================================
 
-TEST_F(LoggerTest, EdgeCaseTests_VeryLongMessage) {
-    fs::path test_file = GetTestFilePath("very_long.log");
-    Logger logger(test_file);
-    
-    std::string very_long(100000, 'A');
-    logger.Log(very_long);
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, very_long + "\n");
-    ASSERT_EQ(content.size(), very_long.size() + 1);
+TEST_F(LoggerTest, LogBasic_OneLogAppearsInFile) {
+    Logger logger(log_path_);
+    logger.Log("msg");
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], "msg 0");
 }
 
-TEST_F(LoggerTest, EdgeCaseTests_OnlySpaces) {
-    fs::path test_file = GetTestFilePath("spaces_only.log");
-    Logger logger(test_file);
-    
-    logger.Log("     ");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "     \n");
+TEST_F(LoggerTest, LogBasic_SeveralLogsInOrder) {
+    Logger logger(log_path_);
+    logger.Log("a");
+    logger.Log("b");
+    logger.Log("c");
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 4u);
+    ASSERT_EQ(lines[1], "a 0");
+    ASSERT_EQ(lines[2], "b 0");
+    ASSERT_EQ(lines[3], "c 0");
 }
 
-TEST_F(LoggerTest, EdgeCaseTests_OnlyNewlines) {
-    fs::path test_file = GetTestFilePath("newlines_only.log");
-    Logger logger(test_file);
-    
-    logger.Log("\n\n\n");
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "\n\n\n\n");
+TEST_F(LoggerTest, LogBasic_EmptyMessageAllowed) {
+    Logger logger(log_path_);
+    logger.Log("");
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], " 0");
 }
 
-TEST_F(LoggerTest, EdgeCaseTests_MultipleOperations) {
-    fs::path test_file = GetTestFilePath("multiple_ops.log");
-    Logger logger(test_file);
-    
-    // Множественные операции
-    for (int i = 0; i < 50; ++i) {
-        logger.Log("Message " + std::to_string(i));
-    }
-    
-    std::string content = ReadFileContent(test_file);
-    ASSERT_GT(content.size(), 0);
-    
-    // Проверяем, что все сообщения на месте
-    for (int i = 0; i < 50; ++i) {
-        std::string expected = "Message " + std::to_string(i) + "\n";
-        ASSERT_NE(content.find(expected), std::string::npos);
-    }
+TEST_F(LoggerTest, LogBasic_MessageWithSpaces) {
+    Logger logger(log_path_);
+    logger.Log("a b c");
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], "a b c 0");
 }
 
-TEST_F(LoggerTest, EdgeCaseTests_NewlineFormat) {
-    fs::path test_file = GetTestFilePath("format.log");
-    Logger logger(test_file);
-    
-    logger.Log("Test message");
-    
-    std::string content = ReadFileContent(test_file);
-    
-    // Проверяем, что после сообщения добавлен \n
+TEST_F(LoggerTest, LogBasic_ExplicitLevelInFile) {
+    Logger logger(log_path_);
+    logger.Log("x", 5);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_TRUE(lines[1].size() >= 2);
+    ASSERT_EQ(lines[1].substr(lines[1].size() - 2), " 5");
+}
+
+// ============================================================================
+// Group 3: Log() — levels and format (5 tests)
+// ============================================================================
+
+TEST_F(LoggerTest, LogLevel_DefaultLevelZero) {
+    Logger logger(log_path_);
+    logger.Log("a");
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], "a 0");
+}
+
+TEST_F(LoggerTest, LogLevel_DifferentLevelsWritten) {
+    Logger logger(log_path_);
+    logger.Log("l1", 1);
+    logger.Log("l2", 2);
+    logger.Log("l3", 100);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 4u);
+    ASSERT_EQ(lines[1], "l1 1");
+    ASSERT_EQ(lines[2], "l2 2");
+    ASSERT_EQ(lines[3], "l3 100");
+}
+
+TEST_F(LoggerTest, LogLevel_FormatMessageLevel) {
+    Logger logger(log_path_);
+    logger.Log("hello", 42);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], "hello 42");
+}
+
+TEST_F(LoggerTest, LogLevel_ExplicitLevelZero) {
+    Logger logger(log_path_);
+    logger.Log("msg", 0);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], "msg 0");
+}
+
+TEST_F(LoggerTest, LogLevel_LargeLevel) {
+    Logger logger(log_path_);
+    logger.Log("m", 99999);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], "m 99999");
+}
+
+// ============================================================================
+// Group 4: Log file format (5 tests)
+// ============================================================================
+
+TEST_F(LoggerTest, LogFormat_StructureTimestampThenLogs) {
+    Logger logger(log_path_);
+    logger.Log("x", 0);
+    logger.Log("y", 1);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 3u);
+    long long t = std::atoll(lines[0].c_str());
+    ASSERT_GT(t, 0);
+    ASSERT_EQ(lines[1], "x 0");
+    ASSERT_EQ(lines[2], "y 1");
+}
+
+TEST_F(LoggerTest, LogFormat_EachLineEndsWithNewline) {
+    Logger logger(log_path_);
+    logger.Log("a");
+    std::ifstream f(log_path_.string());
+    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    f.close();
+    ASSERT_FALSE(content.empty());
     ASSERT_EQ(content.back(), '\n');
-    ASSERT_EQ(content, "Test message\n");
-    
-    // Проверяем, что каждый Log добавляет \n
-    logger.Log("Another message");
-    content = ReadFileContent(test_file);
-    ASSERT_EQ(content, "Test message\nAnother message\n");
-    ASSERT_EQ(content.back(), '\n');
+}
+
+TEST_F(LoggerTest, LogFormat_OrderOfLogsPreserved) {
+    Logger logger(log_path_);
+    logger.Log("first", 1);
+    logger.Log("second", 2);
+    logger.Log("third", 3);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 4u);
+    ASSERT_EQ(lines[1], "first 1");
+    ASSERT_EQ(lines[2], "second 2");
+    ASSERT_EQ(lines[3], "third 3");
+}
+
+TEST_F(LoggerTest, LogFormat_LongMessageSingleLine) {
+    std::string long_msg(500, 'w');
+    Logger logger(log_path_);
+    logger.Log(long_msg, 0);
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], long_msg + " 0");
+}
+
+TEST_F(LoggerTest, LogFormat_SpecialCharsInMessage) {
+    Logger logger(log_path_);
+    logger.Log("a1-b2_c3");
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], "a1-b2_c3 0");
+}
+
+// ============================================================================
+// Group 5: CleanLogs — basic logic (5 tests)
+// ============================================================================
+
+TEST_F(LoggerTest, CleanLogsBasic_AtMostMaxFilesRemain) {
+    fs::path p1 = test_dir_ / "a.log";
+    fs::path p2 = test_dir_ / "b.log";
+    fs::path p3 = test_dir_ / "c.log";
+    {
+        Logger l1(p1);
+        l1.Log("a", 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        Logger l2(p2);
+        l2.Log("b", 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        Logger l3(p3);
+        l3.Log("c", 0);
+    }
+    {
+        Logger logger(p1);
+        logger.CleanLogs(2, 0);
+    }
+    ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
+}
+
+TEST_F(LoggerTest, CleanLogsBasic_OldestRemoved) {
+    fs::path p1 = test_dir_ / "old.log";
+    fs::path p2 = test_dir_ / "new.log";
+    {
+        Logger l1(p1);
+        l1.Log("old", 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        Logger l2(p2);
+        l2.Log("new", 0);
+    }
+    {
+        Logger logger(p2);
+        logger.CleanLogs(1, 0);
+    }
+    ASSERT_FALSE(fs::exists(p1));
+    ASSERT_TRUE(fs::exists(p2));
+}
+
+TEST_F(LoggerTest, CleanLogsBasic_FileWithHighLevelNotRemoved) {
+    fs::path p_low = test_dir_ / "low.log";
+    fs::path p_high = test_dir_ / "high.log";
+    {
+        Logger l_low(p_low);
+        l_low.Log("low", 0);
+        Logger l_high(p_high);
+        l_high.Log("high", 5);
+    }
+    {
+        Logger logger(p_low);
+        logger.CleanLogs(1, 0);
+    }
+    ASSERT_TRUE(fs::exists(p_high));
+}
+
+TEST_F(LoggerTest, CleanLogsBasic_OnlyLowLevelFilesCountTowardMax) {
+    fs::path p1 = test_dir_ / "1.log";
+    fs::path p2 = test_dir_ / "2.log";
+    {
+        Logger l1(p1);
+        l1.Log("a", 0);
+        Logger l2(p2);
+        l2.Log("b", 0);
+    }
+    {
+        Logger logger(p1);
+        logger.CleanLogs(2, 0);
+    }
+    ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
+}
+
+TEST_F(LoggerTest, CleanLogsBasic_LargeMaxFilesRemovesNothing) {
+    fs::path p1 = test_dir_ / "1.log";
+    fs::path p2 = test_dir_ / "2.log";
+    fs::path p3 = test_dir_ / "3.log";
+    {
+        Logger l1(p1);
+        l1.Log("a", 0);
+        Logger l2(p2);
+        l2.Log("b", 0);
+        Logger l3(p3);
+        l3.Log("c", 0);
+    }
+    {
+        Logger logger(p1);
+        logger.CleanLogs(10, 0);
+    }
+    ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 3u);
+}
+
+// ============================================================================
+// Group 6: CleanLogs — edge cases (5 tests)
+// ============================================================================
+
+TEST_F(LoggerTest, CleanLogsEdge_ExactlyMaxFilesNoneRemoved) {
+    fs::path p1 = test_dir_ / "1.log";
+    fs::path p2 = test_dir_ / "2.log";
+    fs::path p3 = test_dir_ / "3.log";
+    fs::path p4 = test_dir_ / "4.log";
+    fs::path p5 = test_dir_ / "5.log";
+    {
+        Logger l1(p1);
+        l1.Log("a", 0);
+        Logger l2(p2);
+        l2.Log("b", 0);
+        Logger l3(p3);
+        l3.Log("c", 0);
+        Logger l4(p4);
+        l4.Log("d", 0);
+        Logger l5(p5);
+        l5.Log("e", 0);
+    }
+    {
+        Logger logger(p1);
+        logger.CleanLogs(5, 0);
+    }
+    ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 5u);
+}
+
+TEST_F(LoggerTest, CleanLogsEdge_OneFileRemains) {
+    Logger logger(log_path_);
+    logger.Log("only", 0);
+    logger.CleanLogs(10, 0);
+    ASSERT_TRUE(fs::exists(log_path_));
+}
+
+TEST_F(LoggerTest, CleanLogsEdge_LevelCleanBoundaryFileWithLevelOne) {
+    Logger logger(log_path_);
+    logger.Log("msg", 1);
+    logger.CleanLogs(1, 1);
+    ASSERT_TRUE(fs::exists(log_path_));
+}
+
+TEST_F(LoggerTest, CleanLogsEdge_MaxFilesZeroDeletesAllCandidates) {
+    fs::path p1 = test_dir_ / "1.log";
+    fs::path p2 = test_dir_ / "2.log";
+    {
+        Logger l1(p1);
+        l1.Log("a", 0);
+        Logger l2(p2);
+        l2.Log("b", 0);
+    }
+    {
+        Logger logger(p1);
+        logger.CleanLogs(0, 0);
+    }
+    ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 0u);
+}
+
+TEST_F(LoggerTest, CleanLogsEdge_SingleLogFileRemains) {
+    Logger logger(log_path_);
+    logger.Log("x", 0);
+    logger.CleanLogs(1, 0);
+    ASSERT_TRUE(fs::exists(log_path_));
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+}
+
+// ============================================================================
+// Group 7: CleanLogs — damaged and foreign files (5 tests)
+// ============================================================================
+
+TEST_F(LoggerTest, CleanLogsDamaged_NonLogFileRemoved) {
+    Logger logger(log_path_);
+    logger.Log("main", 0);
+    fs::path txt_path = test_dir_ / "other.txt";
+    {
+        std::ofstream f(txt_path.string());
+        f << "not a log\n";
+    }
+    ASSERT_TRUE(fs::exists(txt_path));
+    logger.CleanLogs(10, 0);
+    ASSERT_FALSE(fs::exists(txt_path));
+}
+
+TEST_F(LoggerTest, CleanLogsDamaged_LogWithOnlyTimestampCanBeRemoved) {
+    fs::path empty_log = test_dir_ / "empty.log";
+    fs::path full_log = test_dir_ / "full.log";
+    {
+        Logger l1(empty_log);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    {
+        Logger l2(full_log);
+        l2.Log("x", 0);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    {
+        Logger l3(test_dir_ / "another.log");
+        l3.Log("y", 0);
+    }
+    {
+        Logger logger(full_log);
+        logger.CleanLogs(2, 0);
+    }
+    ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
+}
+
+TEST_F(LoggerTest, CleanLogsDamaged_InvalidFirstLineRemoved) {
+    fs::path bad_log = test_dir_ / "bad.log";
+    {
+        std::ofstream f(bad_log.string());
+        f << "0\nmsg 1\n";
+    }
+    {
+        Logger logger(log_path_);
+        logger.Log("ok", 0);
+        logger.CleanLogs(10, 0);
+    }
+    ASSERT_FALSE(fs::exists(bad_log));
+}
+
+TEST_F(LoggerTest, CleanLogsDamaged_LineWithoutValidLevelRemoved) {
+    fs::path bad_log = test_dir_ / "bad.log";
+    {
+        std::ofstream f(bad_log.string());
+        f << "1\nno number here\n";
+    }
+    {
+        Logger logger(log_path_);
+        logger.Log("ok", 0);
+        logger.CleanLogs(10, 0);
+    }
+    ASSERT_FALSE(fs::exists(bad_log));
+}
+
+TEST_F(LoggerTest, CleanLogsDamaged_ValidLogWithLevelZeroNotRemovedByQuota) {
+    Logger logger(log_path_);
+    logger.Log("msg", 0);
+    logger.CleanLogs(1, 0);
+    ASSERT_TRUE(fs::exists(log_path_));
+}
+
+// ============================================================================
+// Group 8: Isolation and integration (5 tests)
+// ============================================================================
+
+TEST_F(LoggerTest, Isolation_WorksInTempDirectory) {
+    Logger logger(log_path_);
+    logger.Log("test", 0);
+    ASSERT_TRUE(fs::exists(log_path_));
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 2u);
+    ASSERT_EQ(lines[1], "test 0");
+}
+
+TEST_F(LoggerTest, Isolation_TwoLoggersTwoFiles) {
+    fs::path p1 = test_dir_ / "first.log";
+    fs::path p2 = test_dir_ / "second.log";
+    {
+        Logger l1(p1);
+        l1.Log("first", 0);
+        Logger l2(p2);
+        l2.Log("second", 0);
+    }
+    ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
+    auto lines1 = ReadLines(p1);
+    auto lines2 = ReadLines(p2);
+    ASSERT_EQ(lines1.size(), 2u);
+    ASSERT_EQ(lines2.size(), 2u);
+    ASSERT_EQ(lines1[1], "first 0");
+    ASSERT_EQ(lines2[1], "second 0");
+}
+
+TEST_F(LoggerTest, Isolation_CleanLogsDoesNotTouchOtherDirectory) {
+    fs::path other_dir = fs::temp_directory_path() / ("logger_test_other_" + std::to_string(
+        std::chrono::steady_clock::now().time_since_epoch().count()));
+    fs::create_directories(other_dir);
+    fs::path other_log = other_dir / "other.log";
+    {
+        Logger logger(log_path_);
+        logger.Log("here", 0);
+        Logger other_logger(other_log);
+        other_logger.Log("there", 0);
+    }
+    {
+        Logger logger(log_path_);
+        logger.CleanLogs(0, 0);
+    }
+    ASSERT_TRUE(fs::exists(other_log));
+    if (fs::exists(other_dir)) {
+        fs::remove_all(other_dir);
+    }
+}
+
+TEST_F(LoggerTest, Isolation_LogThenCleanLogsPreservesFile) {
+    Logger logger(log_path_);
+    logger.Log("a", 0);
+    logger.Log("b", 0);
+    logger.CleanLogs(10, 0);
+    ASSERT_TRUE(fs::exists(log_path_));
+    auto lines = ReadLines(log_path_);
+    ASSERT_EQ(lines.size(), 3u);
+    ASSERT_EQ(lines[1], "a 0");
+    ASSERT_EQ(lines[2], "b 0");
+}
+
+TEST_F(LoggerTest, Isolation_MultipleCleanLogsCallsStable) {
+    fs::path p1 = test_dir_ / "1.log";
+    fs::path p2 = test_dir_ / "2.log";
+    fs::path p3 = test_dir_ / "3.log";
+    {
+        Logger l1(p1);
+        l1.Log("a", 0);
+        Logger l2(p2);
+        l2.Log("b", 0);
+        Logger l3(p3);
+        l3.Log("c", 0);
+    }
+    {
+        Logger logger(p1);
+        logger.CleanLogs(2, 0);
+        ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
+        logger.CleanLogs(2, 0);
+        ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
+    }
 }

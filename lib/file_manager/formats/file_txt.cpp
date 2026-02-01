@@ -1,10 +1,42 @@
 #include "file_txt.hpp"
 #include <cctype>
 #include <algorithm>
+#include <string_view>
+
+std::vector<std::string> LineToWords(const std::string& line) {
+    std::vector<std::string> words;
+    for (size_t index = 0; index < line.size(); ++index) {
+        if (std::isspace(line[index])) continue;
+        auto it = line.begin() + index;
+        while (it < line.end() && !std::isspace(static_cast<char>(*it))) {
+            ++it;
+        }
+        words.push_back(std::string(line.begin() + index, it));
+        index = it - line.begin();
+    }
+    return words;
+}
 
 FileTxt::FileTxt(const fs::path& file_path)
     :RegularFile(file_path)
 {}
+
+FileTxt::~FileTxt()
+{
+    Close();
+}
+
+FileTxt::FileTxt(std::string_view text, const fs::path& file_path) 
+    :RegularFile(file_path)
+{
+    Open();
+    std::vector<std::byte>& data = RegularFile::Data();
+    data.resize(0);
+    for (size_t index = 0; index < text.size(); ++index) {
+        data.push_back(static_cast<std::byte>(text[index]));
+    }
+    Close();
+}
 
 FileTxt::FileTxt(FileTxt& other, const fs::path& file_path)
     :RegularFile(other, file_path)
@@ -18,9 +50,21 @@ FileTxt& FileTxt::operator=(FileTxt& other)
     return *this;
 }
 
-FileTxt& FileTxt::operator+=(const std::string& message)
+FileTxt& FileTxt::operator=(std::string_view text)
+{   
+    Open();
+    std::vector<std::byte>& data = RegularFile::Data();
+    data.resize(0);
+    for (size_t index = 0; index < text.size(); ++index) {
+        data.push_back(static_cast<std::byte>(text[index]));
+    }
+    Close();
+    return *this;
+}
+
+FileTxt& FileTxt::operator+=(std::string_view message)
 {
-    RegularFile::operator+=(message + "\n");
+    RegularFile::operator+=(message);
     return *this;
 }
 
@@ -56,11 +100,6 @@ void FileTxt::Clear()
     Open();
     RegularFile::Data().resize(0);
     Close();
-}
-
-void FileTxt::DeleteFile()
-{
-    RegularFile::DeleteFile();
 }
 
 std::string FileTxt::GetData() 

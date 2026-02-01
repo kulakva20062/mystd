@@ -2,24 +2,29 @@
 #include "../regular_file.hpp"
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 namespace fs = std::filesystem;
 
-class FileTxt final : protected RegularFile {
+std::vector<std::string> LineToWords(const std::string& line);
+
+class FileTxt : public RegularFile {
     public:
         FileTxt(const fs::path& file_path);
 
-        ~FileTxt() = default;
+        FileTxt(std::string_view text, const fs::path& file_path);
+
+        virtual ~FileTxt() override;
 
         FileTxt(FileTxt& other, const fs::path& file_path);
 
         FileTxt& operator=(FileTxt& other);
 
-        FileTxt& operator+=(const std::string& message);
+        FileTxt& operator=(std::string_view text);
+
+        FileTxt& operator+=(std::string_view message);
 
         void Clear();
-
-        void DeleteFile();
 
         void DeleteComments(const std::string& comment_chars = "#");
 

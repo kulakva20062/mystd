@@ -28,7 +28,7 @@ add_library(mystd_logers
     loggers/logger.cpp
 )
 target_include_directories(mystd_logers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(mystd_logers PUBLIC mystd_file_manager)
+target_link_libraries(mystd_logers PUBLIC mystd_file_manager mystd_time)
 
 add_library(mystd_time
     time/time.hpp

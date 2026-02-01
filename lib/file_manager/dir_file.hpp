@@ -3,6 +3,7 @@
 #include "regular_file.hpp"
 #include <vector>
 #include <filesystem>
+#include <string_view>
 
 namespace fs = std::filesystem;
 
@@ -18,7 +19,7 @@ class DirFile : public File {
 
         DirFile& operator+=(const std::vector<std::byte>& message);
 
-        DirFile& operator+=(const std::string& message);
+        DirFile& operator+=(std::string_view message);
 
         void DeleteFile() override;
 
