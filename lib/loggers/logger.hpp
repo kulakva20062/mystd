@@ -6,27 +6,33 @@
 
 namespace fs = std::filesystem;
 
-constexpr size_t DEFAULT_LEVEL_LOG = 0;
-constexpr size_t DEFAULT_MAX_FILES_LOG = 10;
-constexpr size_t DEFAULT_LEVEL_CLEAN_LOG = 1;
+namespace mystd {
 
-class Logger final {
-    public:
-        Logger(const fs::path& file_path = "logs/log-" + std::to_string(mystd::get_year())
-         + "-" + std::to_string(mystd::get_month()) + "-" + std::to_string(mystd::get_day())
-         + "_" + std::to_string(mystd::get_hour()) + ":" + std::to_string(mystd::get_minute())
-         + ":" + std::to_string(mystd::get_second()) + ".log");
+    namespace {
+        constexpr size_t DEFAULT_LEVEL_LOG = 0;
+        constexpr size_t DEFAULT_MAX_FILES_LOG = 10;
+        constexpr size_t DEFAULT_LEVEL_CLEAN_LOG = 0;
+    }
 
-        ~Logger() = default;
+    class Logger final {
+        public:
+            Logger(const fs::path& file_path = "logs/log-" + std::to_string(mystd::get_year())
+            + "-" + std::to_string(mystd::get_month()) + "-" + std::to_string(mystd::get_day())
+            + "_" + std::to_string(mystd::get_hour()) + ":" + std::to_string(mystd::get_minute())
+            + ":" + std::to_string(mystd::get_second()) + ".log");
 
-        Logger(const Logger& other) = delete;
+            ~Logger() = default;
 
-        Logger& operator=(const Logger& other) = delete;
+            Logger(const Logger& other) = delete;
 
-        void Log(std::string_view message, size_t level = DEFAULT_LEVEL_LOG);
+            Logger& operator=(const Logger& other) = delete;
 
-        void CleanLogs(size_t max_files = DEFAULT_MAX_FILES_LOG, size_t level_clean = DEFAULT_LEVEL_LOG);
+            void Log(std::string_view message, size_t level = DEFAULT_LEVEL_LOG);
 
-    private:
-        FileLog file_txt_;
-};
+            void CleanLogs(size_t max_files = DEFAULT_MAX_FILES_LOG, size_t level_clean = DEFAULT_LEVEL_CLEAN_LOG);
+
+        private:
+            FileLog file_txt_;
+    };
+
+} // namespace mystd

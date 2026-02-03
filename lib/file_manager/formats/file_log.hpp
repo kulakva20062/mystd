@@ -1,29 +1,33 @@
 #pragma once
 #include "file_txt.hpp"
 
-class FileLog final : public FileTxt {
-    public:
-        FileLog(const fs::path& file_path) 
-            :FileTxt(file_path)
-        {}
+namespace mystd {
 
-        FileLog(std::string_view text, const fs::path& file_path) 
-            :FileTxt(text, file_path)
-        {}
+    class FileLog final : public FileTxt {
+        public:
+            FileLog(const fs::path& file_path) 
+                :FileTxt(file_path)
+            {}
 
-        ~FileLog() override {
-            Close();
-        }
+            FileLog(std::string_view text, const fs::path& file_path) 
+                :FileTxt(text, file_path)
+            {}
 
-        FileLog(FileLog& other, const fs::path& file_path) 
-            :FileTxt(other, file_path)
-        {}
+            ~FileLog() override {
+                Close();
+            }
 
-        FileLog& operator=(FileLog& other) {
-            if(this == &other) {
+            FileLog(FileLog& other, const fs::path& file_path) 
+                :FileTxt(other, file_path)
+            {}
+
+            FileLog& operator=(FileLog& other) {
+                if(this == &other) {
+                    return *this;
+                }
+                FileTxt::operator=(other);
                 return *this;
             }
-            FileTxt::operator=(other);
-            return *this;
-        }
-};
+    };
+
+} // namespace mystd

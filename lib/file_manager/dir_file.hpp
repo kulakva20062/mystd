@@ -7,6 +7,8 @@
 
 namespace fs = std::filesystem;
 
+namespace mystd {
+
 class DirFile : public File {
     public:
         DirFile(const fs::path& file_path, bool is_open = false);
@@ -40,3 +42,5 @@ class DirFile : public File {
         void CopyFile(DirFile& other_file);
         
 };
+
+} // namespace mystd

@@ -59,18 +59,18 @@ std::atomic<unsigned> LoggerTest::s_counter_{0};
 // ============================================================================
 
 TEST_F(LoggerTest, ConstructorAndInit_ExplicitPathCreatesFile) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     ASSERT_TRUE(fs::exists(log_path_));
 }
 
 TEST_F(LoggerTest, ConstructorAndInit_ClearsAndWritesOneLine) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 1u);
 }
 
 TEST_F(LoggerTest, ConstructorAndInit_FirstLineIsValidTimestamp) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 1u);
     long long t = std::atoll(lines[0].c_str());
@@ -79,11 +79,11 @@ TEST_F(LoggerTest, ConstructorAndInit_FirstLineIsValidTimestamp) {
 
 TEST_F(LoggerTest, ConstructorAndInit_RecreateOverwritesLog) {
     {
-        Logger logger(log_path_);
+        mystd::Logger logger(log_path_);
         logger.Log("first", 0);
     }
     {
-        Logger logger(log_path_);
+        mystd::Logger logger(log_path_);
     }
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 1u);
@@ -91,7 +91,7 @@ TEST_F(LoggerTest, ConstructorAndInit_RecreateOverwritesLog) {
 
 TEST_F(LoggerTest, ConstructorAndInit_CreatesParentDirectory) {
     fs::path deep_path = test_dir_ / "subdir" / "nested" / "file.log";
-    Logger logger(deep_path);
+    mystd::Logger logger(deep_path);
     ASSERT_TRUE(fs::exists(deep_path));
     ASSERT_TRUE(fs::is_directory(deep_path.parent_path()));
 }
@@ -101,7 +101,7 @@ TEST_F(LoggerTest, ConstructorAndInit_CreatesParentDirectory) {
 // ============================================================================
 
 TEST_F(LoggerTest, LogBasic_OneLogAppearsInFile) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("msg");
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -109,7 +109,7 @@ TEST_F(LoggerTest, LogBasic_OneLogAppearsInFile) {
 }
 
 TEST_F(LoggerTest, LogBasic_SeveralLogsInOrder) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("a");
     logger.Log("b");
     logger.Log("c");
@@ -121,7 +121,7 @@ TEST_F(LoggerTest, LogBasic_SeveralLogsInOrder) {
 }
 
 TEST_F(LoggerTest, LogBasic_EmptyMessageAllowed) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("");
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -129,7 +129,7 @@ TEST_F(LoggerTest, LogBasic_EmptyMessageAllowed) {
 }
 
 TEST_F(LoggerTest, LogBasic_MessageWithSpaces) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("a b c");
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -137,7 +137,7 @@ TEST_F(LoggerTest, LogBasic_MessageWithSpaces) {
 }
 
 TEST_F(LoggerTest, LogBasic_ExplicitLevelInFile) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("x", 5);
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -150,7 +150,7 @@ TEST_F(LoggerTest, LogBasic_ExplicitLevelInFile) {
 // ============================================================================
 
 TEST_F(LoggerTest, LogLevel_DefaultLevelZero) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("a");
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -158,7 +158,7 @@ TEST_F(LoggerTest, LogLevel_DefaultLevelZero) {
 }
 
 TEST_F(LoggerTest, LogLevel_DifferentLevelsWritten) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("l1", 1);
     logger.Log("l2", 2);
     logger.Log("l3", 100);
@@ -170,7 +170,7 @@ TEST_F(LoggerTest, LogLevel_DifferentLevelsWritten) {
 }
 
 TEST_F(LoggerTest, LogLevel_FormatMessageLevel) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("hello", 42);
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -178,7 +178,7 @@ TEST_F(LoggerTest, LogLevel_FormatMessageLevel) {
 }
 
 TEST_F(LoggerTest, LogLevel_ExplicitLevelZero) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("msg", 0);
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -186,7 +186,7 @@ TEST_F(LoggerTest, LogLevel_ExplicitLevelZero) {
 }
 
 TEST_F(LoggerTest, LogLevel_LargeLevel) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("m", 99999);
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -198,7 +198,7 @@ TEST_F(LoggerTest, LogLevel_LargeLevel) {
 // ============================================================================
 
 TEST_F(LoggerTest, LogFormat_StructureTimestampThenLogs) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("x", 0);
     logger.Log("y", 1);
     auto lines = ReadLines(log_path_);
@@ -210,7 +210,7 @@ TEST_F(LoggerTest, LogFormat_StructureTimestampThenLogs) {
 }
 
 TEST_F(LoggerTest, LogFormat_EachLineEndsWithNewline) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("a");
     std::ifstream f(log_path_.string());
     std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
@@ -220,7 +220,7 @@ TEST_F(LoggerTest, LogFormat_EachLineEndsWithNewline) {
 }
 
 TEST_F(LoggerTest, LogFormat_OrderOfLogsPreserved) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("first", 1);
     logger.Log("second", 2);
     logger.Log("third", 3);
@@ -233,7 +233,7 @@ TEST_F(LoggerTest, LogFormat_OrderOfLogsPreserved) {
 
 TEST_F(LoggerTest, LogFormat_LongMessageSingleLine) {
     std::string long_msg(500, 'w');
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log(long_msg, 0);
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -241,7 +241,7 @@ TEST_F(LoggerTest, LogFormat_LongMessageSingleLine) {
 }
 
 TEST_F(LoggerTest, LogFormat_SpecialCharsInMessage) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("a1-b2_c3");
     auto lines = ReadLines(log_path_);
     ASSERT_EQ(lines.size(), 2u);
@@ -257,17 +257,17 @@ TEST_F(LoggerTest, CleanLogsBasic_AtMostMaxFilesRemain) {
     fs::path p2 = test_dir_ / "b.log";
     fs::path p3 = test_dir_ / "c.log";
     {
-        Logger l1(p1);
+        mystd::Logger l1(p1);
         l1.Log("a", 0);
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
-        Logger l2(p2);
+        mystd::Logger l2(p2);
         l2.Log("b", 0);
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
-        Logger l3(p3);
+        mystd::Logger l3(p3);
         l3.Log("c", 0);
     }
     {
-        Logger logger(p1);
+        mystd::Logger logger(p1);
         logger.CleanLogs(2, 0);
     }
     ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
@@ -277,14 +277,14 @@ TEST_F(LoggerTest, CleanLogsBasic_OldestRemoved) {
     fs::path p1 = test_dir_ / "old.log";
     fs::path p2 = test_dir_ / "new.log";
     {
-        Logger l1(p1);
+        mystd::Logger l1(p1);
         l1.Log("old", 0);
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        Logger l2(p2);
+        mystd::Logger l2(p2);
         l2.Log("new", 0);
     }
     {
-        Logger logger(p2);
+        mystd::Logger logger(p2);
         logger.CleanLogs(1, 0);
     }
     ASSERT_FALSE(fs::exists(p1));
@@ -295,13 +295,13 @@ TEST_F(LoggerTest, CleanLogsBasic_FileWithHighLevelNotRemoved) {
     fs::path p_low = test_dir_ / "low.log";
     fs::path p_high = test_dir_ / "high.log";
     {
-        Logger l_low(p_low);
+        mystd::Logger l_low(p_low);
         l_low.Log("low", 0);
-        Logger l_high(p_high);
+        mystd::Logger l_high(p_high);
         l_high.Log("high", 5);
     }
     {
-        Logger logger(p_low);
+        mystd::Logger logger(p_low);
         logger.CleanLogs(1, 0);
     }
     ASSERT_TRUE(fs::exists(p_high));
@@ -311,13 +311,13 @@ TEST_F(LoggerTest, CleanLogsBasic_OnlyLowLevelFilesCountTowardMax) {
     fs::path p1 = test_dir_ / "1.log";
     fs::path p2 = test_dir_ / "2.log";
     {
-        Logger l1(p1);
+        mystd::Logger l1(p1);
         l1.Log("a", 0);
-        Logger l2(p2);
+        mystd::Logger l2(p2);
         l2.Log("b", 0);
     }
     {
-        Logger logger(p1);
+        mystd::Logger logger(p1);
         logger.CleanLogs(2, 0);
     }
     ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
@@ -328,15 +328,15 @@ TEST_F(LoggerTest, CleanLogsBasic_LargeMaxFilesRemovesNothing) {
     fs::path p2 = test_dir_ / "2.log";
     fs::path p3 = test_dir_ / "3.log";
     {
-        Logger l1(p1);
+        mystd::Logger l1(p1);
         l1.Log("a", 0);
-        Logger l2(p2);
+        mystd::Logger l2(p2);
         l2.Log("b", 0);
-        Logger l3(p3);
+        mystd::Logger l3(p3);
         l3.Log("c", 0);
     }
     {
-        Logger logger(p1);
+        mystd::Logger logger(p1);
         logger.CleanLogs(10, 0);
     }
     ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 3u);
@@ -353,33 +353,33 @@ TEST_F(LoggerTest, CleanLogsEdge_ExactlyMaxFilesNoneRemoved) {
     fs::path p4 = test_dir_ / "4.log";
     fs::path p5 = test_dir_ / "5.log";
     {
-        Logger l1(p1);
+        mystd::Logger l1(p1);
         l1.Log("a", 0);
-        Logger l2(p2);
+        mystd::Logger l2(p2);
         l2.Log("b", 0);
-        Logger l3(p3);
+        mystd::Logger l3(p3);
         l3.Log("c", 0);
-        Logger l4(p4);
+        mystd::Logger l4(p4);
         l4.Log("d", 0);
-        Logger l5(p5);
+        mystd::Logger l5(p5);
         l5.Log("e", 0);
     }
     {
-        Logger logger(p1);
+        mystd::Logger logger(p1);
         logger.CleanLogs(5, 0);
     }
     ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 5u);
 }
 
 TEST_F(LoggerTest, CleanLogsEdge_OneFileRemains) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("only", 0);
     logger.CleanLogs(10, 0);
     ASSERT_TRUE(fs::exists(log_path_));
 }
 
 TEST_F(LoggerTest, CleanLogsEdge_LevelCleanBoundaryFileWithLevelOne) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("msg", 1);
     logger.CleanLogs(1, 1);
     ASSERT_TRUE(fs::exists(log_path_));
@@ -389,20 +389,20 @@ TEST_F(LoggerTest, CleanLogsEdge_MaxFilesZeroDeletesAllCandidates) {
     fs::path p1 = test_dir_ / "1.log";
     fs::path p2 = test_dir_ / "2.log";
     {
-        Logger l1(p1);
+        mystd::Logger l1(p1);
         l1.Log("a", 0);
-        Logger l2(p2);
+        mystd::Logger l2(p2);
         l2.Log("b", 0);
     }
     {
-        Logger logger(p1);
+        mystd::Logger logger(p1);
         logger.CleanLogs(0, 0);
     }
     ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 0u);
 }
 
 TEST_F(LoggerTest, CleanLogsEdge_SingleLogFileRemains) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("x", 0);
     logger.CleanLogs(1, 0);
     ASSERT_TRUE(fs::exists(log_path_));
@@ -415,7 +415,7 @@ TEST_F(LoggerTest, CleanLogsEdge_SingleLogFileRemains) {
 // ============================================================================
 
 TEST_F(LoggerTest, CleanLogsDamaged_NonLogFileRemoved) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("main", 0);
     fs::path txt_path = test_dir_ / "other.txt";
     {
@@ -431,20 +431,20 @@ TEST_F(LoggerTest, CleanLogsDamaged_LogWithOnlyTimestampCanBeRemoved) {
     fs::path empty_log = test_dir_ / "empty.log";
     fs::path full_log = test_dir_ / "full.log";
     {
-        Logger l1(empty_log);
+        mystd::Logger l1(empty_log);
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
     {
-        Logger l2(full_log);
+        mystd::Logger l2(full_log);
         l2.Log("x", 0);
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
     {
-        Logger l3(test_dir_ / "another.log");
+        mystd::Logger l3(test_dir_ / "another.log");
         l3.Log("y", 0);
     }
     {
-        Logger logger(full_log);
+        mystd::Logger logger(full_log);
         logger.CleanLogs(2, 0);
     }
     ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
@@ -457,7 +457,7 @@ TEST_F(LoggerTest, CleanLogsDamaged_InvalidFirstLineRemoved) {
         f << "0\nmsg 1\n";
     }
     {
-        Logger logger(log_path_);
+        mystd::Logger logger(log_path_);
         logger.Log("ok", 0);
         logger.CleanLogs(10, 0);
     }
@@ -471,7 +471,7 @@ TEST_F(LoggerTest, CleanLogsDamaged_LineWithoutValidLevelRemoved) {
         f << "1\nno number here\n";
     }
     {
-        Logger logger(log_path_);
+        mystd::Logger logger(log_path_);
         logger.Log("ok", 0);
         logger.CleanLogs(10, 0);
     }
@@ -479,7 +479,7 @@ TEST_F(LoggerTest, CleanLogsDamaged_LineWithoutValidLevelRemoved) {
 }
 
 TEST_F(LoggerTest, CleanLogsDamaged_ValidLogWithLevelZeroNotRemovedByQuota) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("msg", 0);
     logger.CleanLogs(1, 0);
     ASSERT_TRUE(fs::exists(log_path_));
@@ -490,7 +490,7 @@ TEST_F(LoggerTest, CleanLogsDamaged_ValidLogWithLevelZeroNotRemovedByQuota) {
 // ============================================================================
 
 TEST_F(LoggerTest, Isolation_WorksInTempDirectory) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("test", 0);
     ASSERT_TRUE(fs::exists(log_path_));
     auto lines = ReadLines(log_path_);
@@ -502,9 +502,9 @@ TEST_F(LoggerTest, Isolation_TwoLoggersTwoFiles) {
     fs::path p1 = test_dir_ / "first.log";
     fs::path p2 = test_dir_ / "second.log";
     {
-        Logger l1(p1);
+        mystd::Logger l1(p1);
         l1.Log("first", 0);
-        Logger l2(p2);
+        mystd::Logger l2(p2);
         l2.Log("second", 0);
     }
     ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
@@ -522,13 +522,13 @@ TEST_F(LoggerTest, Isolation_CleanLogsDoesNotTouchOtherDirectory) {
     fs::create_directories(other_dir);
     fs::path other_log = other_dir / "other.log";
     {
-        Logger logger(log_path_);
+        mystd::Logger logger(log_path_);
         logger.Log("here", 0);
-        Logger other_logger(other_log);
+        mystd::Logger other_logger(other_log);
         other_logger.Log("there", 0);
     }
     {
-        Logger logger(log_path_);
+        mystd::Logger logger(log_path_);
         logger.CleanLogs(0, 0);
     }
     ASSERT_TRUE(fs::exists(other_log));
@@ -538,7 +538,7 @@ TEST_F(LoggerTest, Isolation_CleanLogsDoesNotTouchOtherDirectory) {
 }
 
 TEST_F(LoggerTest, Isolation_LogThenCleanLogsPreservesFile) {
-    Logger logger(log_path_);
+    mystd::Logger logger(log_path_);
     logger.Log("a", 0);
     logger.Log("b", 0);
     logger.CleanLogs(10, 0);
@@ -554,15 +554,15 @@ TEST_F(LoggerTest, Isolation_MultipleCleanLogsCallsStable) {
     fs::path p2 = test_dir_ / "2.log";
     fs::path p3 = test_dir_ / "3.log";
     {
-        Logger l1(p1);
+        mystd::Logger l1(p1);
         l1.Log("a", 0);
-        Logger l2(p2);
+        mystd::Logger l2(p2);
         l2.Log("b", 0);
-        Logger l3(p3);
+        mystd::Logger l3(p3);
         l3.Log("c", 0);
     }
     {
-        Logger logger(p1);
+        mystd::Logger logger(p1);
         logger.CleanLogs(2, 0);
         ASSERT_EQ(CountFilesWithExtension(test_dir_, ".log"), 2u);
         logger.CleanLogs(2, 0);

@@ -3,41 +3,45 @@
 
 namespace fs = std::filesystem;
 
-bool Exists(fs::path);
+namespace mystd {
 
-bool IsDirectory(fs::path);
+    bool Exists(fs::path);
 
-bool IsRegularFile(fs::path);
+    bool IsDirectory(fs::path);
 
-class File {
-    public:
-        File(const fs::path& file_path);
+    bool IsRegularFile(fs::path);
 
-        virtual ~File() = default;
+    class File {
+        public:
+            File(const fs::path& file_path);
 
-        File(const File& other) = delete;
+            virtual ~File() = default;
 
-        File& operator=(const File& other) = delete;
+            File(const File& other) = delete;
 
-        const fs::path& GetPath() const;
+            File& operator=(const File& other) = delete;
 
-        fs::path GetFileName() const;
+            const fs::path& GetPath() const;
 
-        fs::path GetParentPath() const;
+            fs::path GetFileName() const;
 
-        fs::path Absolute() const;
+            fs::path GetParentPath() const;
 
-        virtual void DeleteFile() = 0;
+            fs::path Absolute() const;
 
-        virtual void Close() = 0;
+            virtual void DeleteFile() = 0;
 
-        virtual void Open() = 0;
+            virtual void Close() = 0;
 
-        virtual bool IsOpen() const = 0;
+            virtual void Open() = 0;
 
-    protected:
-        void SetPath(const fs::path& new_file_path);
+            virtual bool IsOpen() const = 0;
 
-    private:
-        fs::path file_path_;
-};
+        protected:
+            void SetPath(const fs::path& new_file_path);
+
+        private:
+            fs::path file_path_;
+    };
+
+} // namespace mystd

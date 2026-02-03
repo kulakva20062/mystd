@@ -3,39 +3,43 @@
 
 namespace fs = std::filesystem;
 
-bool Exists(fs::path file_path) {
-    return fs::exists(file_path);
-}
+namespace mystd {
 
-bool IsDirectory(fs::path file_path) {
-    return fs::is_directory(file_path);
-}
+    bool Exists(fs::path file_path) {
+        return fs::exists(file_path);
+    }
 
-bool IsRegularFile(fs::path file_path) {
-    return fs::is_regular_file(file_path);
-}
+    bool IsDirectory(fs::path file_path) {
+        return fs::is_directory(file_path);
+    }
 
-fs::path File::Absolute() const {
-    return fs::absolute(file_path_);
-}
+    bool IsRegularFile(fs::path file_path) {
+        return fs::is_regular_file(file_path);
+    }
 
-File::File(const fs::path& file_path) 
-    :file_path_(file_path)
-{}
+    fs::path File::Absolute() const {
+        return fs::absolute(file_path_);
+    }
 
-const fs::path& File::GetPath() const {
-    return file_path_;
-}
+    File::File(const fs::path& file_path) 
+        :file_path_(file_path)
+    {}
 
-fs::path File::GetFileName() const {
-    return file_path_.filename();
-}
+    const fs::path& File::GetPath() const {
+        return file_path_;
+    }
 
-fs::path File::GetParentPath() const {
-    return file_path_.parent_path();
-}
+    fs::path File::GetFileName() const {
+        return file_path_.filename();
+    }
 
-void File::SetPath(const fs::path& new_file_path) {
-    file_path_ = new_file_path;
-}
+    fs::path File::GetParentPath() const {
+        return file_path_.parent_path();
+    }
+
+    void File::SetPath(const fs::path& new_file_path) {
+        file_path_ = new_file_path;
+    }
+
+} // namespace mystd
 

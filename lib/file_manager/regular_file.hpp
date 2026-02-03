@@ -7,41 +7,45 @@
 
 namespace fs = std::filesystem;
 
-class RegularFile : public File {
-    public:
-        RegularFile(const fs::path& file_path, bool is_open = false);
+namespace mystd {
 
-        virtual ~RegularFile() override;
+    class RegularFile : public File {
+        public:
+            RegularFile(const fs::path& file_path, bool is_open = false);
 
-        RegularFile(RegularFile& other, const fs::path& file_path, bool is_open = false); 
+            virtual ~RegularFile() override;
 
-        RegularFile& operator=(RegularFile& other);
+            RegularFile(RegularFile& other, const fs::path& file_path, bool is_open = false); 
 
-        RegularFile& operator+=(const std::vector<std::byte>& message);
+            RegularFile& operator=(RegularFile& other);
 
-        RegularFile& operator+=(std::string_view message);
+            RegularFile& operator+=(const std::vector<std::byte>& message);
 
-        fs::path GetStem() const;
+            RegularFile& operator+=(std::string_view message);
 
-        fs::path GetExtension() const;
+            fs::path GetStem() const;
 
-        void DeleteFile() override;
+            fs::path GetExtension() const;
 
-        void Close() override;
+            void DeleteFile() override;
 
-    protected:
+            void Close() override;
 
-        void Open() override;
+        protected:
 
-        bool IsOpen() const override;
+            void Open() override;
 
-        std::vector<std::byte>& Data();
+            bool IsOpen() const override;
 
-    private:
-        bool is_open_;
-        std::vector<std::byte> data_;
+            std::vector<std::byte>& Data();
 
-        void CreateFile() const;
+        private:
+            bool is_open_;
+            std::vector<std::byte> data_;
 
-        void CopyFile(RegularFile& other_file);
-};
+            void CreateFile() const;
+
+            void CopyFile(RegularFile& other_file);
+    };
+
+} // namespace mystd

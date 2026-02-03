@@ -3,141 +3,145 @@
 #include <algorithm>
 #include <string_view>
 
-std::vector<std::string> LineToWords(const std::string& line) {
-    std::vector<std::string> words;
-    for (size_t index = 0; index < line.size(); ++index) {
-        if (std::isspace(line[index])) continue;
-        auto it = line.begin() + index;
-        while (it < line.end() && !std::isspace(static_cast<char>(*it))) {
-            ++it;
+namespace mystd {
+
+    std::vector<std::string> LineToWords(const std::string& line) {
+        std::vector<std::string> words;
+        for (size_t index = 0; index < line.size(); ++index) {
+            if (std::isspace(line[index])) continue;
+            auto it = line.begin() + index;
+            while (it < line.end() && !std::isspace(static_cast<char>(*it))) {
+                ++it;
+            }
+            words.push_back(std::string(line.begin() + index, it));
+            index = it - line.begin();
         }
-        words.push_back(std::string(line.begin() + index, it));
-        index = it - line.begin();
+        return words;
     }
-    return words;
-}
 
-FileTxt::FileTxt(const fs::path& file_path)
-    :RegularFile(file_path)
-{}
+    FileTxt::FileTxt(const fs::path& file_path)
+        :RegularFile(file_path)
+    {}
 
-FileTxt::~FileTxt()
-{
-    Close();
-}
-
-FileTxt::FileTxt(std::string_view text, const fs::path& file_path) 
-    :RegularFile(file_path)
-{
-    Open();
-    std::vector<std::byte>& data = RegularFile::Data();
-    data.resize(0);
-    for (size_t index = 0; index < text.size(); ++index) {
-        data.push_back(static_cast<std::byte>(text[index]));
+    FileTxt::~FileTxt()
+    {
+        Close();
     }
-    Close();
-}
 
-FileTxt::FileTxt(FileTxt& other, const fs::path& file_path)
-    :RegularFile(other, file_path)
-{}
+    FileTxt::FileTxt(std::string_view text, const fs::path& file_path) 
+        :RegularFile(file_path)
+    {
+        Open();
+        std::vector<std::byte>& data = RegularFile::Data();
+        data.resize(0);
+        for (size_t index = 0; index < text.size(); ++index) {
+            data.push_back(static_cast<std::byte>(text[index]));
+        }
+        Close();
+    }
 
-FileTxt& FileTxt::operator=(FileTxt& other)
-{
-    if (this == &other) 
+    FileTxt::FileTxt(FileTxt& other, const fs::path& file_path)
+        :RegularFile(other, file_path)
+    {}
+
+    FileTxt& FileTxt::operator=(FileTxt& other)
+    {
+        if (this == &other) 
+            return *this;
+        RegularFile::operator=(other);
         return *this;
-    RegularFile::operator=(other);
-    return *this;
-}
-
-FileTxt& FileTxt::operator=(std::string_view text)
-{   
-    Open();
-    std::vector<std::byte>& data = RegularFile::Data();
-    data.resize(0);
-    for (size_t index = 0; index < text.size(); ++index) {
-        data.push_back(static_cast<std::byte>(text[index]));
     }
-    Close();
-    return *this;
-}
 
-FileTxt& FileTxt::operator+=(std::string_view message)
-{
-    RegularFile::operator+=(message);
-    return *this;
-}
-
-void FileTxt::DeleteComments(const std::string& comment_chars)
-{
-    bool is_space = true;
-    Open();
-    for (size_t index = 0; index < RegularFile::Data().size(); ++index) {
-        if (std::isspace(static_cast<char>(RegularFile::Data()[index]))) { 
-            is_space = true;
+    FileTxt& FileTxt::operator=(std::string_view text)
+    {   
+        Open();
+        std::vector<std::byte>& data = RegularFile::Data();
+        data.resize(0);
+        for (size_t index = 0; index < text.size(); ++index) {
+            data.push_back(static_cast<std::byte>(text[index]));
         }
-        else {
-            if (is_space && index + comment_chars.size() < RegularFile::Data().size()) {
-                for (size_t index_comment = 0; index_comment < comment_chars.size(); ++index_comment) {
-                    if (static_cast<char>(RegularFile::Data()[index + index_comment]) != comment_chars[index_comment]) {
-                        is_space = false;
-                        break;
+        Close();
+        return *this;
+    }
+
+    FileTxt& FileTxt::operator+=(std::string_view message)
+    {
+        RegularFile::operator+=(message);
+        return *this;
+    }
+
+    void FileTxt::DeleteComments(const std::string& comment_chars)
+    {
+        bool is_space = true;
+        Open();
+        for (size_t index = 0; index < RegularFile::Data().size(); ++index) {
+            if (std::isspace(static_cast<char>(RegularFile::Data()[index]))) { 
+                is_space = true;
+            }
+            else {
+                if (is_space && index + comment_chars.size() < RegularFile::Data().size()) {
+                    for (size_t index_comment = 0; index_comment < comment_chars.size(); ++index_comment) {
+                        if (static_cast<char>(RegularFile::Data()[index + index_comment]) != comment_chars[index_comment]) {
+                            is_space = false;
+                            break;
+                        }
+                    }
+                    if (is_space) {
+                        RegularFile::Data().erase(RegularFile::Data().begin() + index, std::find(RegularFile::Data().begin() + index, RegularFile::Data().end(), static_cast<std::byte>('\n')));
+                        continue;
                     }
                 }
-                if (is_space) {
-                    RegularFile::Data().erase(RegularFile::Data().begin() + index, std::find(RegularFile::Data().begin() + index, RegularFile::Data().end(), static_cast<std::byte>('\n')));
-                    continue;
-                }
+                is_space = false;
             }
-            is_space = false;
         }
+        Close();
     }
-    Close();
-}
 
-void FileTxt::Clear()
-{
-    Open();
-    RegularFile::Data().resize(0);
-    Close();
-}
-
-std::string FileTxt::GetData() 
-{
-    Open();
-    std::string data;
-    for (size_t index = 0; index < RegularFile::Data().size(); ++index) {
-        data.push_back(static_cast<char>(RegularFile::Data()[index]));
+    void FileTxt::Clear()
+    {
+        Open();
+        RegularFile::Data().resize(0);
+        Close();
     }
-    Close();
-    return data;
-}
 
-std::vector<std::string> FileTxt::GetLines()
-{
-    Open();
-    std::vector<std::string> lines;
-    for (size_t index = 0; index < RegularFile::Data().size(); ++index) {
-        auto it = std::find(RegularFile::Data().begin() + index, RegularFile::Data().end(), static_cast<std::byte>('\n'));
-        lines.push_back(std::string(RegularFile::Data().begin() + index, it));
-        index = it - RegularFile::Data().begin();
-    }
-    Close();
-    return lines;
-}
-
-std::vector<std::string> FileTxt::GetWords() {
-    Open();
-    std::vector<std::string> words;
-    for (size_t index = 0; index < RegularFile::Data().size(); ++index) {
-        if (std::isspace(static_cast<char>(RegularFile::Data()[index]))) continue;
-        auto it = RegularFile::Data().begin() + index;
-        while (it < RegularFile::Data().end() && !std::isspace(static_cast<char>(*it))) {
-            ++it;
+    std::string FileTxt::GetData() 
+    {
+        Open();
+        std::string data;
+        for (size_t index = 0; index < RegularFile::Data().size(); ++index) {
+            data.push_back(static_cast<char>(RegularFile::Data()[index]));
         }
-        words.push_back(std::string(RegularFile::Data().begin() + index, it));
-        index = it - RegularFile::Data().begin();
+        Close();
+        return data;
     }
-    Close();
-    return words;
-}
+
+    std::vector<std::string> FileTxt::GetLines()
+    {
+        Open();
+        std::vector<std::string> lines;
+        for (size_t index = 0; index < RegularFile::Data().size(); ++index) {
+            auto it = std::find(RegularFile::Data().begin() + index, RegularFile::Data().end(), static_cast<std::byte>('\n'));
+            lines.push_back(std::string(RegularFile::Data().begin() + index, it));
+            index = it - RegularFile::Data().begin();
+        }
+        Close();
+        return lines;
+    }
+
+    std::vector<std::string> FileTxt::GetWords() {
+        Open();
+        std::vector<std::string> words;
+        for (size_t index = 0; index < RegularFile::Data().size(); ++index) {
+            if (std::isspace(static_cast<char>(RegularFile::Data()[index]))) continue;
+            auto it = RegularFile::Data().begin() + index;
+            while (it < RegularFile::Data().end() && !std::isspace(static_cast<char>(*it))) {
+                ++it;
+            }
+            words.push_back(std::string(RegularFile::Data().begin() + index, it));
+            index = it - RegularFile::Data().begin();
+        }
+        Close();
+        return words;
+    }
+
+} // namespace mystd

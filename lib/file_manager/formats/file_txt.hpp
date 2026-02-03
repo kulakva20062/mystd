@@ -6,32 +6,35 @@
 
 namespace fs = std::filesystem;
 
-std::vector<std::string> LineToWords(const std::string& line);
+namespace mystd {
 
-class FileTxt : public RegularFile {
-    public:
-        FileTxt(const fs::path& file_path);
+    std::vector<std::string> LineToWords(const std::string& line);
 
-        FileTxt(std::string_view text, const fs::path& file_path);
+    class FileTxt : public RegularFile {
+        public:
+            FileTxt(const fs::path& file_path);
 
-        virtual ~FileTxt() override;
+            FileTxt(std::string_view text, const fs::path& file_path);
 
-        FileTxt(FileTxt& other, const fs::path& file_path);
+            virtual ~FileTxt() override;
 
-        FileTxt& operator=(FileTxt& other);
+            FileTxt(FileTxt& other, const fs::path& file_path);
 
-        FileTxt& operator=(std::string_view text);
+            FileTxt& operator=(FileTxt& other);
 
-        FileTxt& operator+=(std::string_view message);
+            FileTxt& operator=(std::string_view text);
 
-        void Clear();
+            FileTxt& operator+=(std::string_view message);
 
-        void DeleteComments(const std::string& comment_chars = "#");
+            void Clear();
 
-        std::string GetData();
+            void DeleteComments(const std::string& comment_chars = "#");
 
-        std::vector<std::string> GetLines();
+            std::string GetData();
 
-        std::vector<std::string> GetWords();
-};
+            std::vector<std::string> GetLines();
 
+            std::vector<std::string> GetWords();
+    };
+
+} // namespace mystd
