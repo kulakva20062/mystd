@@ -1,6 +1,7 @@
 #pragma once
 #include "../file_manager/formats/file_log.hpp"
 #include "../time/time.hpp"
+#include <ctime>
 #include <filesystem>
 #include <string_view>
 
