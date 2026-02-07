@@ -1,10 +1,8 @@
 #include "logger.hpp"
 #include "../file_manager/dir_file.hpp"
 #include "../file_manager/formats/file_log.hpp"
-#include "../time/time.hpp"
 #include <filesystem>
 #include <string>
-#include <chrono>
 #include <algorithm>
 
 namespace fs = std::filesystem;
@@ -15,17 +13,14 @@ namespace mystd {
         :file_txt_(file_path)
     {
         file_txt_.Clear();
-        file_txt_ += std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + "\n";
+        file_txt_ += std::to_string(time_old) + "\n";
     }
 
     void Logger::Log(std::string_view message, size_t level)
     {
-        file_txt_ += std::to_string(get_year()) + "-" + std::to_string(get_month()) + "-" + std::to_string(get_day()) + " " 
-        + std::to_string(get_hour()) + ":" + std::to_string(get_minute()) + ":" + std::to_string(get_second()) + " "
-        + std::string(message.begin(), message.end()) + " " + std::to_string(level) + "\n";
+        std::time_t time_now = std::time(nullptr);
+        file_txt_ += std::string(std::ctime(&time_now)).substr(0, 24) + " text: " + std::string(message.begin(), message.end()) + " " + std::to_string(level) + "\n";
     }
-
-    //TODO возможно стоит добавить какуе-то пометку для важных логов с ошибками в name файла или в самом файле
 
     void Logger::CleanLogs(size_t max_files, size_t level_clean) {
         mystd::DirFile dir_file(file_txt_.GetParentPath());

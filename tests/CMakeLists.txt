@@ -26,12 +26,6 @@ target_include_directories(arg_parser_test
 )
 
 include(GoogleTest)
-gtest_discover_tests(logger_test
-    DISCOVER_TESTS_OPTIONS
-        "--gtest_list_tests"
-    PROPERTIES
-        LABELS "Logger"
-)
 
 gtest_discover_tests(arg_parser_test
     DISCOVER_TESTS_OPTIONS

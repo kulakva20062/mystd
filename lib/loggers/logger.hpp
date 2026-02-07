@@ -1,9 +1,9 @@
 #pragma once
 #include "../file_manager/formats/file_log.hpp"
-#include "../time/time.hpp"
 #include <ctime>
 #include <filesystem>
 #include <string_view>
+#include <string>
 
 namespace fs = std::filesystem;
 
@@ -13,14 +13,12 @@ namespace mystd {
         constexpr size_t DEFAULT_LEVEL_LOG = 0;
         constexpr size_t DEFAULT_MAX_FILES_LOG = 10;
         constexpr size_t DEFAULT_LEVEL_CLEAN_LOG = 0;
-    }
+        static std::time_t time_old = std::time(nullptr);
+   }
 
     class Logger final {
         public:
-            Logger(const fs::path& file_path = "logs/log-" + std::to_string(mystd::get_year())
-            + "-" + std::to_string(mystd::get_month()) + "-" + std::to_string(mystd::get_day())
-            + "_" + std::to_string(mystd::get_hour()) + ":" + std::to_string(mystd::get_minute())
-            + ":" + std::to_string(mystd::get_second()) + ".log");
+            Logger(const fs::path& file_path = "logs/" + std::string(std::ctime(&time_old)) + ".log");
 
             ~Logger() = default;
 
