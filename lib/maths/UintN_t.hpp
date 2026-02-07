@@ -5,6 +5,7 @@
 #include <concepts>
 #include <compare>
 #include <cstdint>
+#include <bit>
 
 namespace mystd {
 
@@ -17,7 +18,7 @@ namespace mystd {
     #endif
 
     template<size_t width>
-    requires (width > 0)
+    requires (width > 0 && width <= SIZE_MAX)
     class UIntN_t final {
         public:
             template<typename T>
@@ -127,8 +128,21 @@ namespace mystd {
                     return std::strong_ordering::equal;
                 #endif
             }
+
+            //При Биг эндиан всё остаётся также?
+            UIntN_t<width> operator>>(const size_t& shift) {
+                UIntN_t<width> result(*this);
+                std::memmove(result.Data(), result.Data() + shift, SizeBytes() - shift);
+                return result;
+            }
+
+            UIntN_t<width> operator<<(const size_t& shift) {
+                UIntN_t<width> result(*this);
+                std::memmove(result.Data() + shift, result.Data(), SizeBytes() - shift);
+                return result;
+            }
             
-            friend UIntN_t<width>& operator+=(const UIntN_t<width>& lhs, const UIntN_t<width>& rhs) {
+            friend UIntN_t<width>& operator+=(UIntN_t<width>& lhs, const UIntN_t<width>& rhs) {
                 bool overflow = false;
                 #if UINTMAX_WIDTH == 64
                     alignas(64) uint_least8_t result = 0;
@@ -168,7 +182,7 @@ namespace mystd {
                 return lhs;
             }
 
-            friend UIntN_t<width>& operator-=(const UIntN_t<width>& lhs, const UIntN_t<width>& rhs) {
+            friend UIntN_t<width>& operator-=(UIntN_t<width>& lhs, const UIntN_t<width>& rhs) {
                 bool overflow = false;
                 #if UINTMAX_WIDTH == 64
                     alignas(64) uint_least8_t result = 0;
@@ -207,11 +221,27 @@ namespace mystd {
                 return lhs;
             }
 
-            friend UIntN_t<width>& operator/=(const UIntN_t<width>& lhs, const UIntN_t<width>& rhs) {
-                bool overflow = false;
+            friend UIntN_t<width>& operator*=(UIntN_t<width>& lhs, const UIntN_t<width>& rhs) {
+                constexpr size_t result_width = std::bit_ceil(width);
+                //Да долго, но ничего не могу придумать лучше.
+                //Пишу его в первый раз, потом возможно оптимизирую.
+                UIntN_t<result_width> result(0U);
+                UIntN_t<result_width> lhs_copy(lhs);
+                UIntN_t<result_width> rhs_copy(rhs);
 
                 #if defined(MYSTD_LITTLE_ENDIAN)
+                    UIntN_t<result_width / 2> lhs_part_left = static_cast<UIntN_t<result_width / 2>>(lhs_copy);
+                    UIntN_t<result_width / 2> lhs_part_right = static_cast<UIntN_t<result_width / 2>>(lhs_copy >> (result_width / 2));
+                    UIntN_t<result_width / 2> rhs_part_left = static_cast<UIntN_t<result_width / 2>>(rhs_copy);
+                    UIntN_t<result_width / 2> rhs_part_right = static_cast<UIntN_t<result_width / 2>>(rhs_copy >> (result_width / 2));
+
+                    UIntN_t<result_width> z0 = lhs_part_left * rhs_part_left;
+                    UIntN_t<result_width> z1 = (lhs_part_left + lhs_part_right) * (rhs_part_left + rhs_part_right);
+                    UIntN_t<result_width> z2 = lhs_part_right * rhs_part_right;
+
+                    result = z0 + (z1 - z0 - z2) << (result_width / 2) + z2;
                 #endif
+                lhs = result;
                 return lhs;
             }
 
