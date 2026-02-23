@@ -2,6 +2,6 @@
 .cache
 build
 build-asan
+idea
 
-#idea
 #trash

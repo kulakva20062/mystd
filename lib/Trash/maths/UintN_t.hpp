@@ -129,7 +129,7 @@ namespace mystd {
                 #endif
             }
 
-            //При Биг эндиан всё остаётся также?
+            // //При Биг эндиан всё остаётся также?
             UIntN_t<width> operator>>(const size_t& shift) {
                 UIntN_t<width> result(*this);
                 std::memmove(result.Data(), result.Data() + shift, SizeBytes() - shift);
@@ -144,10 +144,8 @@ namespace mystd {
             
             friend UIntN_t<width>& operator+=(UIntN_t<width>& lhs, const UIntN_t<width>& rhs) {
                 bool overflow = false;
-                #if UINTMAX_WIDTH == 64
-                    alignas(64) uint_least8_t result = 0;
-                #elif UINTMAX_WIDTH == 32
-                    alignas(32) uint_least8_t result = 0;
+                #if UINTMAX_WIDTH % 2 == 0
+                    alignas(UINTMAX_WIDTH) uint_least8_t result = 0;
                 #else
                     uint_least8_t result = 0;
                 #endif
@@ -184,10 +182,8 @@ namespace mystd {
 
             friend UIntN_t<width>& operator-=(UIntN_t<width>& lhs, const UIntN_t<width>& rhs) {
                 bool overflow = false;
-                #if UINTMAX_WIDTH == 64
-                    alignas(64) uint_least8_t result = 0;
-                #elif UINTMAX_WIDTH == 32
-                    alignas(32) uint_least8_t result = 0;
+                #if UINTMAX_WIDTH % 2 == 0
+                    alignas(UINTMAX_WIDTH) uint_least8_t result = 0;
                 #else
                     uint_least8_t result = 0;
                 #endif

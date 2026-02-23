@@ -1,11 +1,10 @@
-#include <iostream>
-#include "../lib/maths/mystdint.hpp"
-#include <bitset>
+#include <boost/pool/pool_alloc.hpp>
+#include <QMainWindow>
+#include <QApplication>
 
-int main() {
-    mystd::UIntN_t<32> a(10U);
-    mystd::UIntN_t<32> b(20U);
-    a *= b;
-    std::bitset<32> a_bits(a.Data());
-    std::cout << a_bits << std::endl;
+int main(int argc, char* argv[]) {
+    QApplication app(argc, argv);
+    QMainWindow window;
+    window.showMaximized();
+    return app.exec();
 }
