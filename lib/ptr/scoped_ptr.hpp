@@ -3,17 +3,17 @@
 namespace mystd {
 
     template<typename T>
-    class ScopedPtr {
+    class IntrusivePtr {
         public:
-            explicit ScopedPtr(T* ptr)  
+            explicit IntrusivePtr(T* ptr)  
                 :ptr_(ptr)
             {}
 
-            ScopedPtr(const ScopedPtr& other) = delete;
+            IntrusivePtr(const IntrusivePtr& other) = delete;
 
-            ScopedPtr& operator=(const ScopedPtr& other) = delete;
+            IntrusivePtr& operator=(const IntrusivePtr& other) = delete;
 
-            ~ScopedPtr() {
+            ~IntrusivePtr() {
                 delete ptr_;
             }
 
@@ -38,4 +38,4 @@ namespace mystd {
             T* ptr_;
     };
 
-}
+} // namespace mystd
