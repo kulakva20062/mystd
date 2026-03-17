@@ -2,7 +2,6 @@
 #include <cstddef>
 #include <climits>
 #include <type_traits>
-#include <concepts>
 
 namespace {
 

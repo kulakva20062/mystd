@@ -3,5 +3,6 @@
 build
 build-asan
 idea
-
+bin
+CMakeLists.txt
 #trash

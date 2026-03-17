@@ -38,10 +38,16 @@ target_include_directories(arg_parser_test
     ${CMAKE_SOURCE_DIR}/lib
 )
 
+add_executable(bor_test bor_test.cpp)
+target_include_directories(bor_test PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+target_link_libraries(bor_test PRIVATE GTest::gtest GTest::gtest_main)
+
 include(GoogleTest)
 
 gtest_discover_tests(bit_test PROPERTIES LABELS "Bit")
 gtest_discover_tests(bit_test_be PROPERTIES LABELS "Bit;BigEndian")
+gtest_discover_tests(bor_test PROPERTIES LABELS "Bor")
+
 gtest_discover_tests(arg_parser_test
     DISCOVER_TESTS_OPTIONS
         "--gtest_list_tests"
