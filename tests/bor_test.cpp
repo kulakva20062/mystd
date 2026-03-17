@@ -6,6 +6,7 @@
 
 using Vec = std::vector<int>;
 using VecVec = std::vector<std::vector<int>>;
+using mystd::Bor;
 
 // ── insert / find ────────────────────────────────────────────────────────────
 
