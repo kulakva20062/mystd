@@ -13,6 +13,7 @@ namespace mystd {
             typename Maps::key_type;
             typename Maps::mapped_type;
             typename Maps::value_type;
+            requires std::same_as<typename Maps::value_type, std::pair<const typename Maps::key_type, typename Maps::mapped_type>>;
         } && requires(Maps m, const Maps cm, typename Maps::key_type k) {
             { m.find(k) } -> std::same_as<typename Maps::iterator>;
             { cm.find(k) } -> std::same_as<typename Maps::const_iterator>;
