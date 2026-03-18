@@ -18,7 +18,7 @@ namespace mystd {
 
     class Logger final {
         public:
-            Logger(const fs::path& file_path = "logs/" + std::string(std::ctime(&time_old)) + ".log");
+        Logger(const fs::path& file_path = "logs/" + []{ std::string s = std::ctime(&time_old); s.erase(s.find('\n')); return s; }() + ".log");
 
             ~Logger() = default;
 
