@@ -9,6 +9,13 @@ add_library(mystd_parsers
     parsers/arg_parser.cpp
 )
 target_include_directories(mystd_parsers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(mystd_parsers PUBLIC mystd_exception)
+
+add_library(mystd_time
+    time/time.hpp
+    time/time.cpp
+)
+target_include_directories(mystd_time PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(mystd_file_manager
     file_manager/dir_file.hpp
@@ -19,6 +26,10 @@ add_library(mystd_file_manager
     file_manager/regular_file.cpp
     file_manager/formats/file_txt.hpp
     file_manager/formats/file_txt.cpp
+    file_manager/formats/file_sav.hpp
+    file_manager/formats/file_sav.cpp
+    file_manager/formats/file_log.hpp
+    file_manager/formats/formats.hpp
 )
 target_include_directories(mystd_file_manager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(mystd_file_manager PUBLIC mystd_exception)
@@ -30,14 +41,8 @@ add_library(mystd_logers
 target_include_directories(mystd_logers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(mystd_logers PUBLIC mystd_file_manager mystd_time)
 
-add_library(mystd_time
-    time/time.hpp
-    time/time.cpp
-)
-target_include_directories(mystd_time PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
 add_library(mystd_lib INTERFACE)
-target_link_libraries(mystd_lib INTERFACE 
+target_link_libraries(mystd_lib INTERFACE
     mystd_exception
     mystd_parsers
     mystd_file_manager
