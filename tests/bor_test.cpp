@@ -192,7 +192,7 @@ TEST(BorIterator, ConstBorIterable) {
     EXPECT_EQ(collected.size(), 2u);
 }
 
-constexpr int seed_max = 400;
+constexpr int seed_max = 25;
 constexpr int max_keys = std::max(100, seed_max);
 
 

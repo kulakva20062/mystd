@@ -2,67 +2,25 @@
 #include <iostream>
 #include <vector>
 
-static int32_t counter = 0;
-std::vector<bool> otv;
-
-struct Node {
-    int32_t count = -1;
-    std::vector<Node*> vse;
-
-    Node() 
-        :vse(26, nullptr)
-    {}
-
-    ~Node() {
-        for (auto node : vse) {
-            delete node;
-        }
-    }
-};
-
-class Bor {
+template<typename key, typename value>
+requires std::totally_ordered<key>
+class AbstractMap {
     public:
-        
-        Bor() {
-            root = new Node();
-        }
+        AbstractMap(key key_, value value_, auto compare = [](key key1, key key2) {
+            return key1 < key2;
+        }) 
+        {}
 
-        ~Bor() {
-            delete root;
-        }
 
-        void check_string(const std::string& data) {
-
-            Node* cur = root;
-            for (size_t index = 0; index < data.size(); ++index) {
-                for (size_t index2 = index; index2 < data.size(); ++index2) {
-                    if (cur->count != -1) {
-                        otv[cur->count - 1] = true;
-                    }
-                    if (cur->vse[data[index2] - 'a'] == nullptr) {
-                        cur = root;
-                        break;
-                    }
-                    cur = cur->vse[data[index2] - 'a'];
-                }
-            }
-
-        }
-
-        void operator+=(const std::string& data) {
-            Node* cur = root;
-            ++counter;
-            for (char c : data) {
-                if (cur->vse[c - 'a'] == nullptr) {
-                    cur->vse[c - 'a'] = new Node();
-                }
-                cur = cur->vse[c - 'a'];
-            }
-            cur->count = counter;
+        bool operator==(const AbstractMap& other) const 
+        requires std::equality_comparable<key> && std::equality_comparable<value>
+        {
+            
         }
 
     private:
-        Node* root;
+        Node* root_; // корень дерева
+        auto compare_; // функция сравнения
 };
 
 int main(int argc, char* argv[]) {
